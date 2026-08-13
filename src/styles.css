@@ -138,3 +138,12 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
 }
+
+@utility watermark {
+  background-image: repeating-linear-gradient(
+      -45deg,
+      color-mix(in oklab, var(--color-foreground) 12%, transparent) 0 2px,
+      transparent 2px 26px
+    );
+}
+
