@@ -53,16 +53,16 @@ function Index() {
       {isLoading ? (
         <p className="mt-8 text-sm text-muted-foreground">Loading…</p>
       ) : categories && categories.length > 0 ? (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {categories.map((c) => (
             <Link
               key={c.id}
               to="/events"
               search={{ category: c.slug }}
-              className="panel group flex items-center justify-between p-6 transition-colors hover:border-primary"
+              className="panel group flex min-h-28 flex-col justify-between p-4 transition-colors hover:border-primary sm:p-6"
             >
-              <span className="font-display text-lg font-semibold">{c.name}</span>
-              <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-1" />
+              <span className="font-display text-base font-semibold sm:text-lg">{c.name}</span>
+              <ArrowRight className="mt-4 h-4 w-4 text-primary transition-transform group-hover:translate-x-1" />
             </Link>
           ))}
         </div>
@@ -71,6 +71,7 @@ function Index() {
           <p className="font-display text-lg font-semibold">No categories yet</p>
         </div>
       )}
+
     </div>
   );
 }
