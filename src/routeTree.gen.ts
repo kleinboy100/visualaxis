@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as ApiPublicYocoWebhookRouteImport } from './routes/api/public/yoco-webhook'
@@ -18,6 +19,11 @@ import { Route as ApiPublicPreviewSplatRouteImport } from './routes/api/public/p
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsIndexRoute = EventsIndexRouteImport.update({
@@ -43,6 +49,7 @@ const ApiPublicPreviewSplatRoute = ApiPublicPreviewSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/': typeof EventsIndexRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events': typeof EventsIndexRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/events/$slug': typeof EventsSlugRoute
   '/events/': typeof EventsIndexRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
@@ -67,6 +76,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/events/$slug'
     | '/events/'
     | '/api/public/yoco-webhook'
@@ -74,6 +84,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/events/$slug'
     | '/events'
     | '/api/public/yoco-webhook'
@@ -81,6 +92,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/events/$slug'
     | '/events/'
     | '/api/public/yoco-webhook'
@@ -89,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   EventsSlugRoute: typeof EventsSlugRoute
   EventsIndexRoute: typeof EventsIndexRoute
   ApiPublicYocoWebhookRoute: typeof ApiPublicYocoWebhookRoute
@@ -102,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events/': {
@@ -137,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   EventsSlugRoute: EventsSlugRoute,
   EventsIndexRoute: EventsIndexRoute,
   ApiPublicYocoWebhookRoute: ApiPublicYocoWebhookRoute,
