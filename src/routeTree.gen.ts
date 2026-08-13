@@ -10,33 +10,89 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EventsIndexRouteImport } from './routes/events.index'
+import { Route as EventsSlugRouteImport } from './routes/events.$slug'
+import { Route as ApiPublicYocoWebhookRouteImport } from './routes/api/public/yoco-webhook'
+import { Route as ApiPublicPreviewSplatRouteImport } from './routes/api/public/preview/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventsIndexRoute = EventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsSlugRoute = EventsSlugRouteImport.update({
+  id: '/events/$slug',
+  path: '/events/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicYocoWebhookRoute = ApiPublicYocoWebhookRouteImport.update({
+  id: '/api/public/yoco-webhook',
+  path: '/api/public/yoco-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPreviewSplatRoute = ApiPublicPreviewSplatRouteImport.update({
+  id: '/api/public/preview/$',
+  path: '/api/public/preview/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/events/$slug': typeof EventsSlugRoute
+  '/events/': typeof EventsIndexRoute
+  '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
+  '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/events/$slug': typeof EventsSlugRoute
+  '/events': typeof EventsIndexRoute
+  '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
+  '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/events/$slug': typeof EventsSlugRoute
+  '/events/': typeof EventsIndexRoute
+  '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
+  '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/events/$slug'
+    | '/events/'
+    | '/api/public/yoco-webhook'
+    | '/api/public/preview/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/events/$slug'
+    | '/events'
+    | '/api/public/yoco-webhook'
+    | '/api/public/preview/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/events/$slug'
+    | '/events/'
+    | '/api/public/yoco-webhook'
+    | '/api/public/preview/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EventsSlugRoute: typeof EventsSlugRoute
+  EventsIndexRoute: typeof EventsIndexRoute
+  ApiPublicYocoWebhookRoute: typeof ApiPublicYocoWebhookRoute
+  ApiPublicPreviewSplatRoute: typeof ApiPublicPreviewSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +104,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events/': {
+      id: '/events/'
+      path: '/events'
+      fullPath: '/events/'
+      preLoaderRoute: typeof EventsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/$slug': {
+      id: '/events/$slug'
+      path: '/events/$slug'
+      fullPath: '/events/$slug'
+      preLoaderRoute: typeof EventsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/yoco-webhook': {
+      id: '/api/public/yoco-webhook'
+      path: '/api/public/yoco-webhook'
+      fullPath: '/api/public/yoco-webhook'
+      preLoaderRoute: typeof ApiPublicYocoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/preview/$': {
+      id: '/api/public/preview/$'
+      path: '/api/public/preview/$'
+      fullPath: '/api/public/preview/$'
+      preLoaderRoute: typeof ApiPublicPreviewSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EventsSlugRoute: EventsSlugRoute,
+  EventsIndexRoute: EventsIndexRoute,
+  ApiPublicYocoWebhookRoute: ApiPublicYocoWebhookRoute,
+  ApiPublicPreviewSplatRoute: ApiPublicPreviewSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
