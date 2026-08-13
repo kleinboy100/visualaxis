@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
+import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as ApiPublicYocoWebhookRouteImport } from './routes/api/public/yoco-webhook'
 import { Route as ApiPublicPreviewSplatRouteImport } from './routes/api/public/preview/$'
 
@@ -54,6 +55,11 @@ const EventsSlugRoute = EventsSlugRouteImport.update({
   path: '/events/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicYocoWebhookRoute = ApiPublicYocoWebhookRouteImport.update({
   id: '/api/public/yoco-webhook',
   path: '/api/public/yoco-webhook',
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/events/$slug': typeof EventsSlugRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events/': typeof EventsIndexRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
   '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/events/$slug': typeof EventsSlugRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events': typeof EventsIndexRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
   '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/events/$slug': typeof EventsSlugRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events/': typeof EventsIndexRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
   '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/events/$slug'
+    | '/orders/$orderId'
     | '/events/'
     | '/api/public/yoco-webhook'
     | '/api/public/preview/$'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/events/$slug'
+    | '/orders/$orderId'
     | '/events'
     | '/api/public/yoco-webhook'
     | '/api/public/preview/$'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/events/$slug'
+    | '/orders/$orderId'
     | '/events/'
     | '/api/public/yoco-webhook'
     | '/api/public/preview/$'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CartRoute: typeof CartRoute
   EventsSlugRoute: typeof EventsSlugRoute
+  OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   EventsIndexRoute: typeof EventsIndexRoute
   ApiPublicYocoWebhookRoute: typeof ApiPublicYocoWebhookRoute
   ApiPublicPreviewSplatRoute: typeof ApiPublicPreviewSplatRoute
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/yoco-webhook': {
       id: '/api/public/yoco-webhook'
       path: '/api/public/yoco-webhook'
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CartRoute: CartRoute,
   EventsSlugRoute: EventsSlugRoute,
+  OrdersOrderIdRoute: OrdersOrderIdRoute,
   EventsIndexRoute: EventsIndexRoute,
   ApiPublicYocoWebhookRoute: ApiPublicYocoWebhookRoute,
   ApiPublicPreviewSplatRoute: ApiPublicPreviewSplatRoute,
