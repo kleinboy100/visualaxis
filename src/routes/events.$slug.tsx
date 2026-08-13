@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/hooks/useCart";
 import { formatZar, previewUrl } from "@/lib/format";
+import { WatermarkedImage } from "@/components/WatermarkedImage";
 
 export const Route = createFileRoute("/events/$slug")({
   head: ({ params }) => {
@@ -104,9 +105,6 @@ function GalleryPage() {
         )}
         <span>{photos.length} photos</span>
       </div>
-      {event.description && (
-        <p className="mt-4 max-w-2xl text-sm text-muted-foreground">{event.description}</p>
-      )}
       <div className="axis-rule mt-6" />
 
       <div className="mt-6 max-w-sm">
@@ -134,14 +132,11 @@ function GalleryPage() {
             const inPrint = cart.has(photo.id, "print");
             return (
               <div key={photo.id} className="panel overflow-hidden">
-                <div className="aspect-[3/2] bg-muted">
-                  <img
-                    src={previewUrl(photo.preview_path)}
-                    alt={photo.title ?? `Photo ${photo.code ?? ""} from ${event.name}`}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+                <WatermarkedImage
+                  className="aspect-[3/2]"
+                  src={previewUrl(photo.preview_path)}
+                  alt={photo.title ?? `Photo ${photo.code ?? ""} from ${event.name}`}
+                />
                 <div className="space-y-3 p-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-display font-semibold">
