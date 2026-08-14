@@ -15,6 +15,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
@@ -51,6 +52,11 @@ const CartRoute = CartRouteImport.update({
   path: '/cart',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsIndexRoute = EventsIndexRouteImport.update({
   id: '/events/',
   path: '/events/',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
+  '/search': typeof SearchRoute
   '/events/$slug': typeof EventsSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events/': typeof EventsIndexRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
+  '/search': typeof SearchRoute
   '/events/$slug': typeof EventsSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events': typeof EventsIndexRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
+  '/search': typeof SearchRoute
   '/events/$slug': typeof EventsSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events/': typeof EventsIndexRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/cart'
+    | '/search'
     | '/events/$slug'
     | '/orders/$orderId'
     | '/events/'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/cart'
+    | '/search'
     | '/events/$slug'
     | '/orders/$orderId'
     | '/events'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/cart'
+    | '/search'
     | '/events/$slug'
     | '/orders/$orderId'
     | '/events/'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   CartRoute: typeof CartRoute
+  SearchRoute: typeof SearchRoute
   EventsSlugRoute: typeof EventsSlugRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   EventsIndexRoute: typeof EventsIndexRoute
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/': {
       id: '/events/'
       path: '/events'
@@ -262,6 +282,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   CartRoute: CartRoute,
+  SearchRoute: SearchRoute,
   EventsSlugRoute: EventsSlugRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   EventsIndexRoute: EventsIndexRoute,
