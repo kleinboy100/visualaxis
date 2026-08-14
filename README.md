@@ -1,14 +1,18 @@
-# Welcome to your Lovable project
+# Photo Gallery Hub (33)
+
+Create a website for photos similar to the one on this website https://photos.teamphotosa.co.za/za/teamphotosa the website name is Visual Axis, I want the same features and categorization of photos, and the option to buy the picture online via yoco, there must be admin side also, for website owner or admin to check users, transactions, to upload or delete photos etc. do not populate the website with images yet, the admin will do it.
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://visualaxis.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/56b4adaa-2a0e-4167-b7a8-565eb763b678).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +24,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
