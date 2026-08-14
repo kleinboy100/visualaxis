@@ -295,7 +295,10 @@ function PhotosTab() {
   const [eventId, setEventId] = useState("");
   const [digital, setDigital] = useState(150);
   const [print, setPrint] = useState(350);
+  const [codePrefix, setCodePrefix] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
+  const [dragging, setDragging] = useState(false);
 
   const { data: photos } = useQuery({
     queryKey: ["admin-photos", eventId],
@@ -311,47 +314,70 @@ function PhotosTab() {
     },
   });
 
-  const upload = async (files: FileList | null) => {
-    if (!files || !eventId) return;
-    setUploading(true);
-    let ok = 0;
-    for (const file of Array.from(files)) {
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const key = `${eventId}/${crypto.randomUUID()}.${ext}`;
-      const previewRes = await supabase.storage.from("photo-previews").upload(key, file, {
-        contentType: file.type || "image/jpeg",
-        upsert: false,
-      });
-      if (previewRes.error) {
-        toast.error(previewRes.error.message);
-        continue;
-      }
-      const originalRes = await supabase.storage.from("photo-originals").upload(key, file, {
-        contentType: file.type || "image/jpeg",
-        upsert: false,
-      });
-      const { error } = await supabase.from("photos").insert({
-        event_id: eventId,
-        title: file.name.replace(/\.[^.]+$/, "").slice(0, 120),
-        code: String(ok + 1).padStart(4, "0"),
-        preview_path: key,
-        original_path: originalRes.error ? null : key,
-        digital_price_cents: Math.round(digital * 100),
-        print_price_cents: Math.round(print * 100),
-      });
-      if (error) toast.error(error.message);
-      else ok += 1;
-    }
-    setUploading(false);
-    if (ok > 0) {
-      toast.success(`${ok} photo${ok > 1 ? "s" : ""} uploaded`);
-      void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
-    }
+  const uploadOne = async (file: File, index: number) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const key = `${eventId}/${crypto.randomUUID()}.${ext}`;
+    const contentType = file.type || "image/jpeg";
+    const previewRes = await supabase.storage
+      .from("photo-previews")
+      .upload(key, file, { contentType, upsert: false });
+    if (previewRes.error) throw new Error(previewRes.error.message);
+    const originalRes = await supabase.storage
+      .from("photo-originals")
+      .upload(key, file, { contentType, upsert: false });
+    const { error } = await supabase.from("photos").insert({
+      event_id: eventId,
+      title: file.name.replace(/\.[^.]+$/, "").slice(0, 120),
+      code: `${codePrefix.trim()}${String(index + 1).padStart(4, "0")}`.slice(0, 40),
+      preview_path: key,
+      original_path: originalRes.error ? null : key,
+      digital_price_cents: Math.round(digital * 100),
+      print_price_cents: Math.round(print * 100),
+    });
+    if (error) throw new Error(error.message);
   };
+
+  const bulkUpload = async (fileList: FileList | File[] | null) => {
+    if (!fileList || !eventId) return;
+    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+    if (files.length === 0) {
+      toast.error("No image files found in that selection.");
+      return;
+    }
+    const startIndex = photos?.length ?? 0;
+    setUploading(true);
+    setProgress({ done: 0, total: files.length, failed: 0 });
+
+    const CONCURRENCY = 4;
+    let cursor = 0;
+    let failed = 0;
+    const worker = async () => {
+      while (cursor < files.length) {
+        const i = cursor++;
+        const file = files[i]!;
+        try {
+          await uploadOne(file, startIndex + i);
+        } catch (err) {
+          failed += 1;
+          console.error("Upload failed", file.name, err);
+        }
+        setProgress((p) => ({ ...p, done: p.done + 1, failed }));
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker));
+
+    setUploading(false);
+    const ok = files.length - failed;
+    if (ok > 0) toast.success(`${ok} photo${ok > 1 ? "s" : ""} uploaded`);
+    if (failed > 0) toast.error(`${failed} file${failed > 1 ? "s" : ""} could not be uploaded`);
+    void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+  };
+
+  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
     <div className="space-y-6">
-      <div className="panel grid gap-4 p-5 sm:grid-cols-3">
+      <div className="panel grid gap-4 p-5 sm:grid-cols-4">
         <div className="space-y-2">
           <Label htmlFor="ph-event">Event</Label>
           <select
@@ -390,18 +416,57 @@ function PhotosTab() {
             onChange={(e) => setPrint(Number(e.target.value))}
           />
         </div>
-        <div className="sm:col-span-3">
-          <Label
-            htmlFor="ph-files"
-            className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border px-4 py-8 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
+        <div className="space-y-2">
+          <Label htmlFor="ph-prefix">Code prefix</Label>
+          <Input
+            id="ph-prefix"
+            value={codePrefix}
+            maxLength={12}
+            placeholder="e.g. ATH-"
+            onChange={(e) => setCodePrefix(e.target.value)}
+          />
+        </div>
+
+        <div className="sm:col-span-4">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (eventId && !uploading) setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              if (!eventId || uploading) return;
+              void bulkUpload(e.dataTransfer.files);
+            }}
+            className={`rounded-md border border-dashed px-4 py-10 text-center text-sm ${
+              dragging ? "border-primary bg-secondary" : "border-border"
+            }`}
           >
-            <Upload className="h-4 w-4" />
-            {uploading
-              ? "Uploading…"
-              : eventId
-                ? "Choose photos to upload to this event"
-                : "Select an event first"}
-          </Label>
+            <Upload className="mx-auto h-5 w-5 text-primary" />
+            <p className="mt-2 font-medium">
+              {eventId ? "Drag and drop photos here" : "Select an event first"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Bulk upload — hundreds of files at a time, 4 uploaded in parallel.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Label
+                htmlFor="ph-files"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-4 py-2 hover:border-primary"
+              >
+                Choose files
+              </Label>
+              <Label
+                htmlFor="ph-folder"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-4 py-2 hover:border-primary"
+              >
+                Choose a folder
+              </Label>
+            </div>
+          </div>
+
           <input
             id="ph-files"
             type="file"
@@ -409,10 +474,36 @@ function PhotosTab() {
             multiple
             className="hidden"
             disabled={!eventId || uploading}
-            onChange={(e) => void upload(e.target.files)}
+            onChange={(e) => void bulkUpload(e.target.files)}
           />
+          <input
+            id="ph-folder"
+            type="file"
+            accept="image/*"
+            multiple
+            // @ts-expect-error non-standard directory picker attributes
+            webkitdirectory=""
+            directory=""
+            className="hidden"
+            disabled={!eventId || uploading}
+            onChange={(e) => void bulkUpload(e.target.files)}
+          />
+
+          {(uploading || progress.total > 0) && (
+            <div className="mt-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {progress.done}/{progress.total} processed
+                {progress.failed > 0 ? ` · ${progress.failed} failed` : ""}
+                {uploading ? " · uploading…" : " · done"}
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
 
       {eventId && (
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
