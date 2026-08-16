@@ -154,7 +154,7 @@ function GalleryPage() {
         />
       </div>
 
-      {visible.length === 0 ? (
+      {photos.length === 0 && children.length > 0 ? null : visible.length === 0 ? (
         <div className="panel mt-8 p-12 text-center">
           <p className="font-display text-lg font-semibold">No photos to show</p>
           <p className="mt-2 text-sm text-muted-foreground">
