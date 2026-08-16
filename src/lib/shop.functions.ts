@@ -167,11 +167,10 @@ export const setUserRole = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
-    if (!isAdmin) throw new Error("Forbidden");
+    const email = String((context.claims as { email?: string }).email ?? "").toLowerCase();
+    if (email !== "mozksolutions@gmail.com") {
+      throw new Error("Only the site owner can change administrator access.");
+    }
     if (data.userId === context.userId && !data.makeAdmin) {
       throw new Error("You cannot remove your own admin access.");
     }
