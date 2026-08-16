@@ -29,7 +29,7 @@ export const Route = createFileRoute("/search")({
       { property: "og:title", content: "Find your photos — Visual Axis" },
       {
         property: "og:description",
-        content: "Search by event or category, or find yourself with a selfie.",
+        content: "Search by event, or find yourself with a selfie.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -50,8 +50,7 @@ function SearchPage() {
     enabled: !!q,
     queryFn: async () => {
       const like = `%${q}%`;
-      const [cats, events, photos] = await Promise.all([
-        supabase.from("categories").select("id, name, slug").ilike("name", like).limit(12),
+      const [events, photos] = await Promise.all([
         supabase
           .from("events")
           .select("id, name, slug, location, event_date, cover_url")
@@ -66,7 +65,6 @@ function SearchPage() {
           .limit(24),
       ]);
       return {
-        categories: cats.data ?? [],
         events: events.data ?? [],
         photos: photos.data ?? [],
       };
@@ -89,7 +87,7 @@ function SearchPage() {
         <Input
           value={term}
           onChange={(e) => setTerm(e.target.value)}
-          placeholder="Event, category, location or photo code"
+          placeholder="Event, folder, location or photo code"
           aria-label="Search term"
         />
         <Button type="submit">
@@ -103,24 +101,6 @@ function SearchPage() {
       {q && (
         <div className="mt-10 space-y-8">
           {isFetching && <p className="text-sm text-muted-foreground">Searching…</p>}
-
-          {!!data?.categories.length && (
-            <section>
-              <h2 className="font-display text-lg font-semibold">Categories</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {data.categories.map((c) => (
-                  <Link
-                    key={c.id}
-                    to="/events"
-                    search={{ category: c.slug }}
-                    className="rounded-full border border-border px-4 py-1.5 text-sm hover:border-primary hover:text-primary"
-                  >
-                    {c.name}
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
 
           {!!data?.events.length && (
             <section>
@@ -165,7 +145,6 @@ function SearchPage() {
           )}
 
           {!isFetching &&
-            !data?.categories.length &&
             !data?.events.length &&
             !data?.photos.length && (
               <div className="panel p-10 text-center text-sm text-muted-foreground">

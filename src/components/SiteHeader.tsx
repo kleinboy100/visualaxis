@@ -15,7 +15,7 @@ const links = [
 ] as const;
 
 export function SiteHeader() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { count } = useCart();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -55,7 +55,7 @@ export function SiteHeader() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search events, categories, photo codes…"
+                placeholder="Search events, folders, photo codes…"
                 aria-label="Search"
                 className="h-9 w-full rounded-full bg-background/25 pr-3 pl-9 text-sm text-primary-foreground placeholder:text-primary-foreground/70 focus:bg-background/35 focus:outline-none"
               />
@@ -113,7 +113,7 @@ export function SiteHeader() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search events or categories…"
+              placeholder="Search events or folders…"
               aria-label="Search"
               className="h-9 w-full rounded-full bg-background/25 pr-3 pl-9 text-sm text-primary-foreground placeholder:text-primary-foreground/70 focus:bg-background/35 focus:outline-none"
             />
@@ -135,7 +135,7 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          {user && (
+          {isAdmin && (
             <Link
               to="/admin"
               className="ml-auto rounded-full px-3.5 py-1.5 font-medium text-primary hover:bg-secondary"
@@ -158,7 +158,7 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          {user && (
+          {isAdmin && (
             <Link
               to="/admin"
               className="rounded-md px-2 py-2.5 font-medium text-primary hover:bg-secondary"
