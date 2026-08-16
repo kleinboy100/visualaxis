@@ -104,24 +104,13 @@ function AdminPage() {
   );
 }
 
-function useCategories() {
-  return useQuery({
-    queryKey: ["admin-categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id, name, slug").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-}
-
 function useAdminEvents() {
   return useQuery({
     queryKey: ["admin-events"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("id, name, slug, location, event_date, published, category_id, cover_url")
+        .select("id, name, slug, location, event_date, published, parent_id, cover_url, description")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -129,20 +118,43 @@ function useAdminEvents() {
   });
 }
 
+type AdminEvent = {
+  id: string;
+  name: string;
+  slug: string;
+  location: string | null;
+  event_date: string | null;
+  published: boolean;
+  parent_id: string | null;
+  cover_url: string | null;
+  description: string | null;
+};
+
+const emptyForm = {
+  name: "",
+  parentId: "",
+  location: "",
+  eventDate: "",
+  description: "",
+};
+
 function EventsTab() {
   const qc = useQueryClient();
-  const { data: categories } = useCategories();
   const { data: events } = useAdminEvents();
-  const [form, setForm] = useState({
-    name: "",
-    categoryId: "",
-    location: "",
-    eventDate: "",
-    description: "",
-  });
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const createEvent = async (e: React.FormEvent) => {
+  const all = (events ?? []) as AdminEvent[];
+  const parents = all.filter((e) => !e.parent_id);
+  const nameOf = (id: string | null) => all.find((e) => e.id === id)?.name ?? "";
+
+  const reset = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+  };
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = z
       .object({
@@ -156,28 +168,35 @@ function EventsTab() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.from("events").insert({
+    const payload = {
       name: parsed.data.name,
-      slug: slugify(parsed.data.name) || crypto.randomUUID().slice(0, 8),
-      category_id: form.categoryId || null,
+      parent_id: form.parentId || null,
       location: parsed.data.location || null,
       event_date: form.eventDate || null,
       description: parsed.data.description || null,
-    });
+    };
+    const { error } = editingId
+      ? await supabase.from("events").update(payload).eq("id", editingId)
+      : await supabase.from("events").insert({
+          ...payload,
+          slug: slugify(parsed.data.name) || crypto.randomUUID().slice(0, 8),
+        });
     setBusy(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setForm({ name: "", categoryId: "", location: "", eventDate: "", description: "" });
-    toast.success("Event created");
+    reset();
+    toast.success(editingId ? "Event updated" : "Event created");
     void qc.invalidateQueries({ queryKey: ["admin-events"] });
   };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-      <form onSubmit={createEvent} className="panel h-fit space-y-4 p-5">
-        <p className="font-display text-lg font-semibold">New event</p>
+      <form onSubmit={submit} className="panel h-fit space-y-4 p-5">
+        <p className="font-display text-lg font-semibold">
+          {editingId ? "Edit event" : "New event or sub-folder"}
+        </p>
         <div className="space-y-2">
           <Label htmlFor="ev-name">Name</Label>
           <Input
@@ -189,19 +208,21 @@ function EventsTab() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="ev-cat">Category</Label>
+          <Label htmlFor="ev-parent">Belongs to</Label>
           <select
-            id="ev-cat"
+            id="ev-parent"
             className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-            value={form.categoryId}
-            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+            value={form.parentId}
+            onChange={(e) => setForm({ ...form, parentId: e.target.value })}
           >
-            <option value="">Uncategorised</option>
-            {(categories ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            <option value="">Main event (top level)</option>
+            {parents
+              .filter((p) => p.id !== editingId)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  Sub-folder of {p.name}
+                </option>
+              ))}
           </select>
         </div>
         <div className="space-y-2">
@@ -233,17 +254,28 @@ function EventsTab() {
           />
         </div>
         <Button type="submit" className="w-full" disabled={busy}>
-          Create event
+          {editingId ? "Save changes" : "Create event"}
         </Button>
+        {editingId && (
+          <Button type="button" variant="outline" className="w-full" onClick={reset}>
+            Cancel
+          </Button>
+        )}
       </form>
 
       <div className="space-y-3">
-        {(events ?? []).map((event) => (
-          <div key={event.id} className="panel flex flex-wrap items-center gap-4 p-4">
+        {all.map((event) => (
+          <div
+            key={event.id}
+            className={`panel flex flex-wrap items-center gap-4 p-4 ${event.parent_id ? "ml-6" : ""}`}
+          >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-sm font-semibold">{event.name}</p>
+              <p className="truncate font-display text-sm font-semibold">
+                {event.parent_id ? `↳ ${event.name}` : event.name}
+              </p>
               <p className="truncate text-xs text-muted-foreground">
                 /{event.slug}
+                {event.parent_id ? ` · in ${nameOf(event.parent_id)}` : " · main event"}
                 {event.event_date ? ` · ${event.event_date}` : ""}
                 {event.location ? ` · ${event.location}` : ""}
               </p>
@@ -262,6 +294,23 @@ function EventsTab() {
                 }}
               />
             </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setEditingId(event.id);
+                setForm({
+                  name: event.name,
+                  parentId: event.parent_id ?? "",
+                  location: event.location ?? "",
+                  eventDate: event.event_date ?? "",
+                  description: event.description ?? "",
+                });
+              }}
+            >
+              Edit
+            </Button>
             <button
               aria-label="Delete event"
               className="text-muted-foreground hover:text-destructive"
@@ -279,7 +328,7 @@ function EventsTab() {
             </button>
           </div>
         ))}
-        {(events ?? []).length === 0 && (
+        {all.length === 0 && (
           <div className="panel p-10 text-center text-sm text-muted-foreground">
             No events yet. Create your first one.
           </div>
@@ -288,6 +337,7 @@ function EventsTab() {
     </div>
   );
 }
+
 
 function PhotosTab() {
   const qc = useQueryClient();
