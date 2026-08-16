@@ -14,33 +14,8 @@ export type Database = {
   }
   public: {
     Tables: {
-      categories: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          slug: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          slug: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          slug?: string
-        }
-        Relationships: []
-      }
       events: {
         Row: {
-          category_id: string | null
           cover_url: string | null
           created_at: string
           description: string | null
@@ -48,11 +23,11 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          parent_id: string | null
           published: boolean
           slug: string
         }
         Insert: {
-          category_id?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
@@ -60,11 +35,11 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
+          parent_id?: string | null
           published?: boolean
           slug: string
         }
         Update: {
-          category_id?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
@@ -72,15 +47,16 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
+          parent_id?: string | null
           published?: boolean
           slug?: string
         }
         Relationships: [
           {
-            foreignKeyName: "events_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: "events_parent_id_fkey"
+            columns: ["parent_id"]
             isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
