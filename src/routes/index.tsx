@@ -11,12 +11,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Open a category, find your event gallery and buy the original high-resolution photo.",
+          "Open an event, browse the galleries and buy the original high-resolution photo.",
       },
       { property: "og:title", content: "Visual Axis — Photo Portal" },
       {
         property: "og:description",
-        content: "Open a category, find your gallery, buy the original photo.",
+        content: "Open an event, find your gallery, buy the original photo.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -26,31 +26,34 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { data: categories, isLoading } = useQuery({
-    queryKey: ["home-categories"],
+  const { data: events, isLoading } = useQuery({
+    queryKey: ["home-events"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, slug")
-        .order("name");
+        .from("events")
+        .select("id, name, slug, cover_url, event_date, location")
+        .is("parent_id", null)
+        .eq("published", true)
+        .order("event_date", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
   const { data: covers } = useQuery({
-    queryKey: ["home-category-covers"],
+    queryKey: ["home-event-covers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("photos")
-        .select("preview_path, events!inner(category_id, published)")
+        .select("preview_path, events!inner(id, parent_id, published)")
         .eq("events.published", true)
-        .limit(200);
+        .limit(300);
       if (error) throw error;
       const map: Record<string, string> = {};
       for (const row of data ?? []) {
-        const ev = row.events as unknown as { category_id: string | null };
-        if (ev.category_id && !map[ev.category_id]) map[ev.category_id] = row.preview_path;
+        const ev = row.events as unknown as { id: string; parent_id: string | null };
+        const key = ev.parent_id ?? ev.id;
+        if (!map[key]) map[key] = row.preview_path;
       }
       return map;
     },
@@ -61,10 +64,10 @@ function Index() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Photo portal</p>
-          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Choose a category</h1>
+          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Choose an event</h1>
         </div>
         <Link to="/events" className="text-sm text-primary hover:opacity-80">
-          All galleries
+          All events
         </Link>
       </div>
       <div className="axis-rule mt-5" />
@@ -88,22 +91,22 @@ function Index() {
 
       {isLoading ? (
         <p className="mt-8 text-sm text-muted-foreground">Loading…</p>
-      ) : categories && categories.length > 0 ? (
+      ) : events && events.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {categories.map((c) => {
-            const cover = covers?.[c.id];
+          {events.map((e) => {
+            const cover = e.cover_url ?? (covers?.[e.id] ? previewUrl(covers[e.id]!) : null);
             return (
               <Link
-                key={c.id}
-                to="/events"
-                search={{ category: c.slug }}
+                key={e.id}
+                to="/events/$slug"
+                params={{ slug: e.slug }}
                 className="panel group relative overflow-hidden transition-colors hover:border-primary"
               >
                 <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
                   {cover ? (
                     <img
-                      src={previewUrl(cover)}
-                      alt={c.name}
+                      src={cover}
+                      alt={e.name}
                       loading="lazy"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -117,7 +120,7 @@ function Index() {
                 </div>
                 <div className="flex items-center justify-between gap-2 p-3">
                   <span className="truncate font-display text-sm font-semibold sm:text-base">
-                    {c.name}
+                    {e.name}
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
                 </div>
@@ -127,7 +130,7 @@ function Index() {
         </div>
       ) : (
         <div className="panel mt-8 p-12 text-center">
-          <p className="font-display text-lg font-semibold">No categories yet</p>
+          <p className="font-display text-lg font-semibold">No events yet</p>
         </div>
       )}
     </div>

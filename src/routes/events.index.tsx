@@ -1,26 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EventCard } from "@/components/EventCard";
 
-type EventsSearch = { category?: string | undefined };
-
 export const Route = createFileRoute("/events/")({
-  validateSearch: (search: Record<string, unknown>): EventsSearch => ({
-    category: typeof search["category"] === "string" ? search["category"] : undefined,
-  }),
   head: () => ({
     meta: [
       { title: "Photo Galleries by Event — Visual Axis" },
       {
         name: "description",
         content:
-          "Every Visual Axis gallery, sorted by category and event date. Find your shoot and buy your photos.",
+          "Every Visual Axis event gallery, sorted by date. Find your event and buy your photos.",
       },
       { property: "og:title", content: "Photo Galleries by Event — Visual Axis" },
       {
         property: "og:description",
-        content: "Every Visual Axis gallery, sorted by category and event date.",
+        content: "Every Visual Axis event gallery, sorted by date.",
       },
     ],
   }),
@@ -28,32 +23,18 @@ export const Route = createFileRoute("/events/")({
 });
 
 function EventsPage() {
-  const { category } = Route.useSearch();
-
-  const { data: categories } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id, name, slug").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const { data: events, isLoading } = useQuery({
-    queryKey: ["events", category ?? "all"],
+    queryKey: ["events", "top-level"],
     queryFn: async () => {
-      const selected = categories?.find((c) => c.slug === category);
-      let query = supabase
+      const { data, error } = await supabase
         .from("events")
-        .select("id, name, slug, location, event_date, cover_url, category_id")
+        .select("id, name, slug, location, event_date, cover_url")
+        .is("parent_id", null)
         .eq("published", true)
         .order("event_date", { ascending: false });
-      if (category && selected) query = query.eq("category_id", selected.id);
-      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !category || !!categories,
   });
 
   return (
@@ -61,32 +42,6 @@ function EventsPage() {
       <p className="eyebrow">Galleries</p>
       <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Browse every event</h1>
       <div className="axis-rule mt-6" />
-
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Link
-          to="/events"
-          search={{}}
-          className={`rounded-full border px-4 py-1.5 text-sm ${
-            !category ? "border-primary text-primary" : "border-border text-muted-foreground"
-          }`}
-        >
-          All
-        </Link>
-        {(categories ?? []).map((c) => (
-          <Link
-            key={c.id}
-            to="/events"
-            search={{ category: c.slug }}
-            className={`rounded-full border px-4 py-1.5 text-sm ${
-              category === c.slug
-                ? "border-primary text-primary"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            {c.name}
-          </Link>
-        ))}
-      </div>
 
       {isLoading ? (
         <p className="mt-10 text-sm text-muted-foreground">Loading galleries…</p>
