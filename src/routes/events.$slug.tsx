@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useCart } from "@/hooks/useCart";
 import { formatZar, previewUrl } from "@/lib/format";
 import { WatermarkedImage } from "@/components/WatermarkedImage";
+import { EventCard } from "@/components/EventCard";
 
 export const Route = createFileRoute("/events/$slug")({
   head: ({ params }) => {
@@ -41,18 +42,34 @@ function GalleryPage() {
     queryFn: async () => {
       const { data: event, error } = await supabase
         .from("events")
-        .select("id, name, description, location, event_date, cover_url")
+        .select("id, name, description, location, event_date, cover_url, parent_id")
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
       if (!event) return null;
+      const { data: children, error: childErr } = await supabase
+        .from("events")
+        .select("id, name, slug, location, event_date, cover_url")
+        .eq("parent_id", event.id)
+        .eq("published", true)
+        .order("name");
+      if (childErr) throw childErr;
+      let parent: { name: string; slug: string } | null = null;
+      if (event.parent_id) {
+        const { data: p } = await supabase
+          .from("events")
+          .select("name, slug")
+          .eq("id", event.parent_id)
+          .maybeSingle();
+        parent = p ?? null;
+      }
       const { data: photos, error: photoErr } = await supabase
         .from("photos")
         .select("id, title, code, preview_path, digital_price_cents, print_price_cents")
         .eq("event_id", event.id)
         .order("created_at", { ascending: true });
       if (photoErr) throw photoErr;
-      return { event, photos: photos ?? [] };
+      return { event, photos: photos ?? [], children: children ?? [], parent };
     },
   });
 
@@ -74,7 +91,7 @@ function GalleryPage() {
     );
   }
 
-  const { event, photos } = data;
+  const { event, photos, children, parent } = data;
   const term = search.trim().toLowerCase();
   const visible = term
     ? photos.filter(
@@ -86,9 +103,19 @@ function GalleryPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-14">
-      <Link to="/events" className="text-sm text-muted-foreground hover:text-foreground">
-        ← All galleries
-      </Link>
+      {parent ? (
+        <Link
+          to="/events/$slug"
+          params={{ slug: parent.slug }}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← {parent.name}
+        </Link>
+      ) : (
+        <Link to="/events" className="text-sm text-muted-foreground hover:text-foreground">
+          ← All events
+        </Link>
+      )}
       <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">{event.name}</h1>
       <div className="mt-3 flex flex-wrap gap-5 text-sm text-muted-foreground">
         {event.event_date && (
@@ -106,6 +133,17 @@ function GalleryPage() {
         <span>{photos.length} photos</span>
       </div>
       <div className="axis-rule mt-6" />
+
+      {children.length > 0 && (
+        <div className="mt-8">
+          <h2 className="font-display text-lg font-semibold">Folders</h2>
+          <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {children.map((c) => (
+              <EventCard key={c.id} event={c} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 max-w-sm">
         <Input
