@@ -436,10 +436,12 @@ function PhotosTab() {
             value={eventId}
             onChange={(e) => setEventId(e.target.value)}
           >
-            <option value="">Select an event…</option>
-            {(events ?? []).map((e) => (
+            <option value="">Select an event or folder…</option>
+            {((events ?? []) as AdminEvent[]).map((e) => (
               <option key={e.id} value={e.id}>
-                {e.name}
+                {e.parent_id
+                  ? `${(events ?? []).find((p) => p.id === e.parent_id)?.name ?? ""} › ${e.name}`
+                  : e.name}
               </option>
             ))}
           </select>
@@ -664,7 +666,11 @@ function OrdersTab() {
   );
 }
 
+const OWNER_EMAIL = "mozksolutions@gmail.com";
+
 function UsersTab() {
+  const { user } = useAuth();
+  const canManageRoles = (user?.email ?? "").toLowerCase() === OWNER_EMAIL;
   const listUsers = useServerFn(adminListUsers);
   const updateRole = useServerFn(setUserRole);
   const { data: users, refetch } = useQuery({
@@ -683,7 +689,8 @@ function UsersTab() {
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Admin</span>
+            <span>{u.isAdmin ? "Admin" : "User"}</span>
+            {canManageRoles && (
             <Switch
               checked={u.isAdmin}
               onCheckedChange={async (checked) => {
@@ -696,6 +703,7 @@ function UsersTab() {
                 }
               }}
             />
+            )}
           </div>
         </div>
       ))}
