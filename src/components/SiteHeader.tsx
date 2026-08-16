@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
+import logo from "@/assets/visual-axis-logo.jpg.asset.json";
+
 
 const links = [
   { to: "/", label: "Home" },
