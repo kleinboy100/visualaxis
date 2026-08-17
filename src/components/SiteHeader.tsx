@@ -32,17 +32,19 @@ export function SiteHeader() {
       {/* Top band */}
       <div className="sky-band text-primary-foreground">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
-          <Link to="/" className="flex items-center gap-2 leading-tight">
+          <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <img
-              src={logo.url}
+              src={logoUrl}
               alt="Visual Axis Media logo"
+              width={40}
+              height={40}
               className="h-10 w-10 shrink-0 rounded-md bg-background object-contain p-0.5"
             />
-            <span>
-              <span className="block font-display text-lg font-semibold tracking-tight">
+            <span className="flex flex-col justify-center leading-none">
+              <span className="font-display text-lg font-semibold tracking-tight">
                 Visual Axis
               </span>
-              <span className="block text-[10px] tracking-[0.22em] uppercase opacity-80">
+              <span className="mt-1 text-[10px] tracking-[0.22em] uppercase opacity-80">
                 School Photos
               </span>
             </span>
