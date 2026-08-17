@@ -87,6 +87,23 @@ function AuthPage() {
 
   const google = async () => {
     setBusy(true);
+    const host = window.location.hostname;
+    const isLovableHost = host.endsWith("lovable.app") || host.endsWith("lovable.dev");
+
+    // Outside Lovable hosting (e.g. Netlify) the managed OAuth broker paths are
+    // not proxied, so go straight to the backend's own Google provider.
+    if (!isLovableHost && host !== "localhost" && host !== "127.0.0.1") {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/account` },
+      });
+      if (error) {
+        setBusy(false);
+        toast.error("Could not sign in with Google");
+      }
+      return;
+    }
+
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -98,6 +115,7 @@ function AuthPage() {
     if (result.redirected) return;
     void navigate({ to: "/account" });
   };
+
 
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 py-16">
