@@ -504,31 +504,40 @@ function PhotosTab() {
               Bulk upload — hundreds of files at a time, 4 uploaded in parallel.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Label
-                htmlFor="ph-files"
-                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-4 py-2 hover:border-primary"
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!eventId || uploading}
+                onClick={() => filesInputRef.current?.click()}
               >
                 Choose files
-              </Label>
-              <Label
-                htmlFor="ph-folder"
-                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-4 py-2 hover:border-primary"
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!eventId || uploading}
+                onClick={() => folderInputRef.current?.click()}
               >
                 Choose a folder
-              </Label>
+              </Button>
             </div>
           </div>
 
           <input
+            ref={filesInputRef}
             id="ph-files"
             type="file"
             accept="image/*"
             multiple
-            className="hidden"
-            disabled={!eventId || uploading}
-            onChange={(e) => void bulkUpload(e.target.files)}
+            className="sr-only"
+            onChange={(e) => {
+              const files = e.target.files;
+              e.target.value = "";
+              void bulkUpload(files);
+            }}
           />
           <input
+            ref={folderInputRef}
             id="ph-folder"
             type="file"
             accept="image/*"
@@ -536,10 +545,14 @@ function PhotosTab() {
             // @ts-expect-error non-standard directory picker attributes
             webkitdirectory=""
             directory=""
-            className="hidden"
-            disabled={!eventId || uploading}
-            onChange={(e) => void bulkUpload(e.target.files)}
+            className="sr-only"
+            onChange={(e) => {
+              const files = e.target.files;
+              e.target.value = "";
+              void bulkUpload(files);
+            }}
           />
+
 
           {(uploading || progress.total > 0) && (
             <div className="mt-4">
