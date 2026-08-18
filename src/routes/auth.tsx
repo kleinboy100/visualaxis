@@ -95,7 +95,7 @@ function AuthPage() {
     if (!isLovableHost && host !== "localhost" && host !== "127.0.0.1") {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/account` },
+        options: { redirectTo: window.location.origin },
       });
       if (error) {
         setBusy(false);
