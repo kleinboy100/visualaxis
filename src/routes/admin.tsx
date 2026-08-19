@@ -506,22 +506,24 @@ function PhotosTab() {
               Bulk upload — hundreds of files at a time, 4 uploaded in parallel.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!eventId || uploading}
-                onClick={() => filesInputRef.current?.click()}
+              <label
+                htmlFor="ph-files"
+                aria-disabled={!eventId || uploading}
+                className={`inline-flex h-10 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent ${
+                  !eventId || uploading ? "pointer-events-none opacity-50" : ""
+                }`}
               >
                 Choose files
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!eventId || uploading}
-                onClick={() => folderInputRef.current?.click()}
+              </label>
+              <label
+                htmlFor="ph-folder"
+                aria-disabled={!eventId || uploading}
+                className={`inline-flex h-10 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent ${
+                  !eventId || uploading ? "pointer-events-none opacity-50" : ""
+                }`}
               >
                 Choose a folder
-              </Button>
+              </label>
             </div>
           </div>
 
@@ -531,11 +533,12 @@ function PhotosTab() {
             type="file"
             accept="image/*"
             multiple
+            disabled={!eventId || uploading}
             className="sr-only"
             onChange={(e) => {
-              const files = e.target.files;
+              const picked = Array.from(e.target.files ?? []);
               e.target.value = "";
-              void bulkUpload(files);
+              void bulkUpload(picked);
             }}
           />
           <input
@@ -544,16 +547,18 @@ function PhotosTab() {
             type="file"
             accept="image/*"
             multiple
+            disabled={!eventId || uploading}
             // @ts-expect-error non-standard directory picker attributes
             webkitdirectory=""
             directory=""
             className="sr-only"
             onChange={(e) => {
-              const files = e.target.files;
+              const picked = Array.from(e.target.files ?? []);
               e.target.value = "";
-              void bulkUpload(files);
+              void bulkUpload(picked);
             }}
           />
+
 
 
           {(uploading || progress.total > 0) && (
