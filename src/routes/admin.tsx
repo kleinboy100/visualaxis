@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -349,6 +349,8 @@ function PhotosTab() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
   const [dragging, setDragging] = useState(false);
+  const filesInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const { data: photos } = useQuery({
     queryKey: ["admin-photos", eventId],
