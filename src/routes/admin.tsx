@@ -349,6 +349,8 @@ function PhotosTab() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
   const [dragging, setDragging] = useState(false);
+  const filesInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const { data: photos } = useQuery({
     queryKey: ["admin-photos", eventId],
