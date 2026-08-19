@@ -1,0 +1,2 @@
+drop policy if exists "Public read of watermarked previews" on storage.objects;
+create policy "Public read of watermarked previews" on storage.objects for select to anon, authenticated using (bucket_id = 'photo-previews');
