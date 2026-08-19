@@ -28,9 +28,10 @@ export const Route = createFileRoute("/api/public/preview/$")({
         }
 
         const objectUrl = `${url.replace(/\/$/, "")}/storage/v1/object/photo-previews/${path}`;
-        const upstream = await fetch(objectUrl, {
-          headers: { apikey: key, Authorization: `Bearer ${key}` },
-        });
+        const headers: Record<string, string> = { apikey: key };
+        // Legacy anon keys are JWTs and may also be sent as a bearer token.
+        if (key.split(".").length === 3) headers["Authorization"] = `Bearer ${key}`;
+        const upstream = await fetch(objectUrl, { headers });
         if (!upstream.ok || !upstream.body) {
           return new Response("Not found", { status: 404 });
         }
