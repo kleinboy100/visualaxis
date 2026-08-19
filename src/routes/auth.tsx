@@ -87,19 +87,19 @@ function AuthPage() {
 
   const google = async () => {
     setBusy(true);
-    const host = window.location.hostname;
-    const isLovableHost = host.endsWith("lovable.app") || host.endsWith("lovable.dev");
+    const inIframe = typeof window !== "undefined" && window.self !== window.top;
 
-    // Outside Lovable hosting (e.g. Netlify) the managed OAuth broker paths are
-    // not proxied, so go straight to the backend's own Google provider.
-    if (!isLovableHost && host !== "localhost" && host !== "127.0.0.1") {
+    // Inside the Lovable editor preview iframe a full-page redirect is blocked,
+    // so use the managed broker. Everywhere else (published site, Netlify,
+    // custom domain) go straight to the backend's own Google provider.
+    if (!inIframe) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: `${window.location.origin}/account` },
       });
       if (error) {
         setBusy(false);
-        toast.error("Could not sign in with Google");
+        toast.error(error.message || "Could not sign in with Google");
       }
       return;
     }
@@ -115,6 +115,7 @@ function AuthPage() {
     if (result.redirected) return;
     void navigate({ to: "/account" });
   };
+
 
 
   return (
