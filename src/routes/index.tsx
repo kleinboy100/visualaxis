@@ -47,13 +47,20 @@ function Index() {
         .from("photos")
         .select("preview_path, events!inner(id, parent_id, published)")
         .eq("events.published", true)
-        .limit(300);
+        .limit(600);
       if (error) throw error;
-      const map: Record<string, string> = {};
+      // One photo per folder, grouped under its top-level event (max 4 shown).
+      const perFolder: Record<string, { parent: string; path: string }> = {};
       for (const row of data ?? []) {
         const ev = row.events as unknown as { id: string; parent_id: string | null };
-        const key = ev.parent_id ?? ev.id;
-        if (!map[key]) map[key] = row.preview_path;
+        if (!perFolder[ev.id]) {
+          perFolder[ev.id] = { parent: ev.parent_id ?? ev.id, path: row.preview_path };
+        }
+      }
+      const map: Record<string, string[]> = {};
+      for (const entry of Object.values(perFolder)) {
+        const list = (map[entry.parent] ??= []);
+        if (list.length < 4) list.push(entry.path);
       }
       return map;
     },
