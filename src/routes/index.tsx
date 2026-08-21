@@ -101,7 +101,8 @@ function Index() {
       ) : events && events.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {events.map((e) => {
-            const cover = e.cover_url ?? (covers?.[e.id] ? previewUrl(covers[e.id]!) : null);
+            const tiles = (covers?.[e.id] ?? []).map(previewUrl);
+            const images = e.cover_url ? [e.cover_url, ...tiles].slice(0, 4) : tiles.slice(0, 4);
             return (
               <Link
                 key={e.id}
