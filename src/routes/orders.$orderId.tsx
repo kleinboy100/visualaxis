@@ -62,11 +62,42 @@ function OrderPage() {
     },
   });
 
+  const autoDownloaded = useRef(false);
+
   useEffect(() => {
     if (!user || !data || data.status === "paid") return;
-    void sync({ data: { orderId } })
-      .then(() => refetch())
-      .catch(() => undefined);
+    let cancelled = false;
+    const tick = () =>
+      void sync({ data: { orderId } })
+        .then(() => !cancelled && refetch())
+        .catch(() => undefined);
+    tick();
+    const id = window.setInterval(tick, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, data?.status, orderId]);
+
+  // Automatically download purchased digital photos once payment succeeds.
+  useEffect(() => {
+    if (!user || !data || data.status !== "paid" || autoDownloaded.current) return;
+    const digital = (data.order_items ?? []).filter((i) => i.product_type === "digital");
+    if (digital.length === 0) return;
+    autoDownloaded.current = true;
+    void (async () => {
+      for (const [index, item] of digital.entries()) {
+        try {
+          const res = await download({ data: { orderId, photoId: item.photo_id } });
+          const name = `${item.photos?.code ?? item.photos?.title ?? "visual-axis-photo"}.jpg`;
+          window.setTimeout(() => triggerDownload(res.url, name), index * 700);
+        } catch {
+          /* the manual download button remains available */
+        }
+      }
+      toast.success("Payment confirmed — your photos are downloading.");
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, data?.status, orderId]);
 
