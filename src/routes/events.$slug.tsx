@@ -106,7 +106,7 @@ function GalleryPage() {
     );
   }
 
-  const { event, photos, children, parent } = data;
+  const { event, photos, children, parent, childCovers } = data;
   const term = search.trim().toLowerCase();
   const visible = term
     ? photos.filter(
