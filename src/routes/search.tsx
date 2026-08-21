@@ -290,6 +290,14 @@ function SelfieSearch({ defaultOpen }: { defaultOpen: boolean }) {
             onChange={(e) => onFile(e.target.files?.[0])}
           />
         </label>
+        <input
+          ref={nativeCaptureRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={(e) => onFile(e.target.files?.[0])}
+        />
         {camera ? (
           <>
             <Button type="button" onClick={capture}>
@@ -300,11 +308,12 @@ function SelfieSearch({ defaultOpen }: { defaultOpen: boolean }) {
             </Button>
           </>
         ) : (
-          <Button type="button" variant="secondary" onClick={() => void startCamera()}>
+          <Button type="button" variant="secondary" disabled={starting} onClick={() => void startCamera()}>
             <Camera className="h-4 w-4" />
-            Take a selfie
+            {starting ? "Starting camera…" : "Take a selfie"}
           </Button>
         )}
+
         {image && (
           <Button type="button" onClick={() => void search()} disabled={busy}>
             {busy ? "Looking…" : "Find my photos"}
