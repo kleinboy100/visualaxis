@@ -577,6 +577,31 @@ function PhotosTab() {
       </div>
 
 
+      {eventId && (photos ?? []).length > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={async () => {
+            const { error } = await supabase
+              .from("photos")
+              .update({
+                digital_price_cents: Math.round(digital * 100),
+                print_price_cents: Math.round(print * 100),
+              })
+              .eq("event_id", eventId);
+            if (error) toast.error(error.message);
+            else {
+              toast.success("Prices applied to all photos in this folder");
+              void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+            }
+          }}
+        >
+          Apply prices above to all photos in this folder
+        </Button>
+      )}
+
       {eventId && (
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {(photos ?? []).map((photo) => (
