@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Calendar, MapPin, Check } from "lucide-react";
+import { Calendar, MapPin, Check, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -195,13 +195,18 @@ function GalleryPage() {
                   alt={photo.title ?? `Photo ${photo.code ?? ""} from ${event.name}`}
                 />
                 <div className="space-y-3 p-4">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-start justify-between gap-3 text-sm">
                     <span className="font-display font-semibold">
                       {photo.title ?? photo.code ?? "Untitled"}
                     </span>
-                    {photo.code && (
-                      <span className="text-xs text-muted-foreground">#{photo.code}</span>
-                    )}
+                    <div className="text-right">
+                      <span className="font-display text-sm font-semibold text-primary">
+                        {formatZar(photo.digital_price_cents)}
+                      </span>
+                      {photo.code && (
+                        <p className="text-xs text-muted-foreground">#{photo.code}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Button
@@ -216,31 +221,16 @@ function GalleryPage() {
                           productType: "digital",
                           priceCents: photo.digital_price_cents,
                         });
-                        toast.success("Digital photo added to cart");
+                        toast.success("Photo added to cart");
                       }}
                       disabled={inDigital}
                     >
-                      {inDigital ? <Check className="mr-1 h-4 w-4" /> : null}
-                      Digital · {formatZar(photo.digital_price_cents)}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        cart.add({
-                          photoId: photo.id,
-                          eventName: event.name,
-                          photoTitle: photo.title ?? photo.code ?? "Photo",
-                          previewPath: photo.preview_path,
-                          productType: "print",
-                          priceCents: photo.print_price_cents,
-                        });
-                        toast.success("Print added to cart");
-                      }}
-                      disabled={inPrint}
-                    >
-                      {inPrint ? <Check className="mr-1 h-4 w-4" /> : null}
-                      Print · {formatZar(photo.print_price_cents)}
+                      {inDigital ? (
+                        <Check className="mr-1.5 h-4 w-4" />
+                      ) : (
+                        <Download className="mr-1.5 h-4 w-4" />
+                      )}
+                      {inDigital ? "In cart" : "Add to cart"}
                     </Button>
                   </div>
                 </div>
