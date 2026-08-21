@@ -67,10 +67,13 @@ function OrderPage() {
   useEffect(() => {
     if (!user || !data || data.status === "paid") return;
     let cancelled = false;
-    const tick = () =>
+    const tick = () => {
       void sync({ data: { orderId } })
-        .then(() => !cancelled && refetch())
+        .then(() => {
+          if (!cancelled) void refetch();
+        })
         .catch(() => undefined);
+    };
     tick();
     const id = window.setInterval(tick, 4000);
     return () => {
