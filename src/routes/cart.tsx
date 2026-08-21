@@ -56,6 +56,22 @@ function CartPage() {
         },
       });
       cart.clear();
+      // Yoco's hosted checkout refuses to run inside an iframe (it shows
+      // "Something went wrong"), so always leave the frame for the payment page.
+      const inFrame = window.top !== window.self;
+      if (inFrame) {
+        const opened = window.open(res.redirectUrl, "_blank", "noopener");
+        if (!opened) {
+          try {
+            window.top!.location.href = res.redirectUrl;
+          } catch {
+            window.location.href = res.redirectUrl;
+          }
+        }
+        toast.success("Payment opened in a new tab. Complete it there.");
+        setBusy(false);
+        return;
+      }
       window.location.href = res.redirectUrl;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Checkout could not be started");
