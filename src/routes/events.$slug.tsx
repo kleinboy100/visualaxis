@@ -69,7 +69,22 @@ function GalleryPage() {
         .eq("event_id", event.id)
         .order("created_at", { ascending: true });
       if (photoErr) throw photoErr;
-      return { event, photos: photos ?? [], children: children ?? [], parent };
+
+      const childCovers: Record<string, string> = {};
+      if (children && children.length > 0) {
+        const { data: childPhotos } = await supabase
+          .from("photos")
+          .select("event_id, preview_path")
+          .in(
+            "event_id",
+            children.map((c) => c.id),
+          )
+          .limit(400);
+        for (const row of childPhotos ?? []) {
+          if (!childCovers[row.event_id]) childCovers[row.event_id] = row.preview_path;
+        }
+      }
+      return { event, photos: photos ?? [], children: children ?? [], parent, childCovers };
     },
   });
 
