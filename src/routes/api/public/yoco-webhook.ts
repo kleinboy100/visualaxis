@@ -39,13 +39,23 @@ export const Route = createFileRoute("/api/public/yoco-webhook")({
         }
 
         const orderId = payload.payload?.metadata?.orderId;
-        if (orderId && payload.type === "payment.succeeded") {
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          await supabaseAdmin.from("orders").update({ status: "paid" }).eq("id", orderId);
-        }
-        if (orderId && payload.type === "payment.failed") {
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          await supabaseAdmin.from("orders").update({ status: "failed" }).eq("id", orderId);
+        const status =
+          payload.type === "payment.succeeded"
+            ? "paid"
+            : payload.type === "payment.failed"
+              ? "failed"
+              : null;
+
+        if (orderId && status) {
+          // Best-effort bookkeeping. The service-role key is not available in
+          // every deployment, so a failure here is not fatal: the order page
+          // re-verifies payment directly with Yoco before any download.
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            await supabaseAdmin.from("orders").update({ status }).eq("id", orderId);
+          } catch {
+            // ignore — payment status is confirmed on demand via the Yoco API
+          }
         }
 
         return new Response("ok");
