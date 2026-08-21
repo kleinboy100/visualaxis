@@ -72,8 +72,7 @@ export const startCheckout = createServerFn({ method: "POST" })
       metadata: { orderId: order.id },
     });
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
+    await supabase
       .from("orders")
       .update({ yoco_checkout_id: checkout.id })
       .eq("id", order.id);
@@ -98,8 +97,7 @@ export const syncOrderStatus = createServerFn({ method: "POST" })
     const status =
       checkout.status === "completed" || checkout.status === "succeeded" ? "paid" : order.status;
     if (status !== order.status) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin.from("orders").update({ status }).eq("id", order.id);
+      await context.supabase.from("orders").update({ status }).eq("id", order.id);
     }
     return { status };
   });
@@ -113,10 +111,20 @@ export const getDownloadLink = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: order } = await supabase
       .from("orders")
-      .select("id, status")
+      .select("id, status, yoco_checkout_id")
       .eq("id", data.orderId)
       .maybeSingle();
-    if (!order || order.status !== "paid") throw new Error("This order is not paid yet.");
+    if (!order) throw new Error("Order not found.");
+
+    // Authoritative payment check against Yoco (never trust the stored status).
+    if (!order.yoco_checkout_id) throw new Error("This order is not paid yet.");
+    const { fetchYocoCheckout } = await import("./shop.server");
+    const checkout = await fetchYocoCheckout(order.yoco_checkout_id);
+    const isPaid = checkout.status === "completed" || checkout.status === "succeeded";
+    if (!isPaid) throw new Error("This order is not paid yet.");
+    if (order.status !== "paid") {
+      await supabase.from("orders").update({ status: "paid" }).eq("id", order.id);
+    }
 
     const { data: item } = await supabase
       .from("order_items")
@@ -134,9 +142,8 @@ export const getDownloadLink = createServerFn({ method: "POST" })
     const path = photo?.original_path ?? photo?.preview_path;
     if (!path) throw new Error("File is unavailable.");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const bucket = photo?.original_path ? "photo-originals" : "photo-previews";
-    const { data: signed, error } = await supabaseAdmin.storage
+    const { data: signed, error } = await supabase.storage
       .from(bucket)
       .createSignedUrl(path, 60 * 10, { download: true });
     if (error || !signed) throw new Error("Could not create the download link.");
@@ -146,13 +153,12 @@ export const getDownloadLink = createServerFn({ method: "POST" })
 export const claimFirstAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { count } = await supabaseAdmin
+    const { count } = await context.supabase
       .from("user_roles")
       .select("id", { count: "exact", head: true })
       .eq("role", "admin");
     if ((count ?? 0) > 0) throw new Error("An administrator already exists for this site.");
-    const { error } = await supabaseAdmin
+    const { error } = await context.supabase
       .from("user_roles")
       .insert({ user_id: context.userId, role: "admin" });
     if (error) throw new Error("Could not grant admin access.");
@@ -174,13 +180,12 @@ export const setUserRole = createServerFn({ method: "POST" })
     if (data.userId === context.userId && !data.makeAdmin) {
       throw new Error("You cannot remove your own admin access.");
     }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (data.makeAdmin) {
-      await supabaseAdmin
+      await context.supabase
         .from("user_roles")
         .upsert({ user_id: data.userId, role: "admin" }, { onConflict: "user_id,role" });
     } else {
-      await supabaseAdmin
+      await context.supabase
         .from("user_roles")
         .delete()
         .eq("user_id", data.userId)
@@ -197,12 +202,11 @@ export const adminListUsers = createServerFn({ method: "GET" })
       _role: "admin",
     });
     if (!isAdmin) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: profiles } = await supabaseAdmin
+    const { data: profiles } = await context.supabase
       .from("profiles")
       .select("id, email, full_name, created_at")
       .order("created_at", { ascending: false });
-    const { data: roles } = await supabaseAdmin
+    const { data: roles } = await context.supabase
       .from("user_roles")
       .select("user_id, role")
       .eq("role", "admin");
