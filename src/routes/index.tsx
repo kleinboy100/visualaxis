@@ -111,13 +111,24 @@ function Index() {
                 className="panel group relative overflow-hidden transition-colors hover:border-primary"
               >
                 <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
-                  {cover ? (
-                    <img
-                      src={cover}
-                      alt={e.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                  {images.length > 0 ? (
+                    <div
+                      className={`grid h-full w-full gap-px ${
+                        images.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                      } ${images.length > 2 ? "grid-rows-2" : "grid-rows-1"}`}
+                    >
+                      {images.map((src, i) => (
+                        <img
+                          key={src}
+                          src={src}
+                          alt={`${e.name} preview ${i + 1}`}
+                          loading="lazy"
+                          className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                            images.length === 3 && i === 0 ? "row-span-2" : ""
+                          }`}
+                        />
+                      ))}
+                    </div>
                   ) : (
                     <div className="sky-band flex h-full w-full items-center justify-center">
                       <span className="font-display text-xs font-semibold tracking-[0.2em] text-primary-foreground uppercase">
@@ -126,8 +137,8 @@ function Index() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center justify-between gap-2 p-3">
-                  <span className="truncate font-display text-sm font-semibold sm:text-base">
+                <div className="flex items-start justify-between gap-2 p-3">
+                  <span className="font-display text-sm font-bold break-words sm:text-base">
                     {e.name}
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
