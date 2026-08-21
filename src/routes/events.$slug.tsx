@@ -154,7 +154,11 @@ function GalleryPage() {
           <h2 className="font-display text-lg font-semibold">Folders</h2>
           <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
             {children.map((c) => (
-              <EventCard key={c.id} event={c} />
+              <EventCard
+                key={c.id}
+                event={c}
+                fallbackSrc={childCovers[c.id] ? previewUrl(childCovers[c.id]!) : null}
+              />
             ))}
           </div>
         </div>
