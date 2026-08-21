@@ -12,7 +12,7 @@ export async function createYocoCheckout(input: {
   const secret = process.env["YOCO_SECRET_KEY"];
   if (!secret) {
     throw new Error(
-      "Yoco is not connected yet. Add your Yoco secret key to enable online payments.",
+      "Payments are not configured on this deployment (missing YOCO_SECRET_KEY environment variable).",
     );
   }
   const res = await fetch("https://payments.yoco.com/api/checkouts", {
