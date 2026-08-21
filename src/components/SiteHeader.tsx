@@ -32,7 +32,7 @@ export function SiteHeader() {
       {/* Top band */}
       <div className="sky-band text-primary-foreground">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
-          <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+          <Link to="/" className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             <img
               src={logoUrl}
               alt="Visual Axis Media logo"
@@ -40,8 +40,8 @@ export function SiteHeader() {
               height={40}
               className="h-9 w-9 shrink-0 rounded-md bg-background object-contain p-0.5 sm:h-10 sm:w-10"
             />
-            <span className="flex min-w-0 items-center leading-none">
-              <span className="truncate font-display text-base font-semibold tracking-tight sm:text-lg">
+            <span className="flex items-center leading-none">
+              <span className="font-display text-[15px] font-semibold tracking-tight whitespace-nowrap sm:text-lg">
                 Visual Axis Media
               </span>
             </span>
@@ -65,7 +65,7 @@ export function SiteHeader() {
             <Link
               to="/search"
               search={{ selfie: true }}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-background/20 hover:bg-background/30"
+              className="hidden h-9 w-9 items-center justify-center rounded-full bg-background/20 hover:bg-background/30 sm:inline-flex"
               aria-label="Find my photos with a selfie"
             >
               <ScanFace className="h-4.5 w-4.5" />
@@ -91,7 +91,7 @@ export function SiteHeader() {
                 <UserIcon className="h-4.5 w-4.5" />
               </Link>
             ) : (
-              <Button asChild size="sm" variant="secondary" className="rounded-full">
+              <Button asChild size="sm" variant="secondary" className="h-9 rounded-full px-3 text-xs sm:px-4 sm:text-sm">
                 <Link to="/auth">Sign in</Link>
               </Button>
             )}
