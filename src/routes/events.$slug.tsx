@@ -69,7 +69,22 @@ function GalleryPage() {
         .eq("event_id", event.id)
         .order("created_at", { ascending: true });
       if (photoErr) throw photoErr;
-      return { event, photos: photos ?? [], children: children ?? [], parent };
+
+      const childCovers: Record<string, string> = {};
+      if (children && children.length > 0) {
+        const { data: childPhotos } = await supabase
+          .from("photos")
+          .select("event_id, preview_path")
+          .in(
+            "event_id",
+            children.map((c) => c.id),
+          )
+          .limit(400);
+        for (const row of childPhotos ?? []) {
+          if (!childCovers[row.event_id]) childCovers[row.event_id] = row.preview_path;
+        }
+      }
+      return { event, photos: photos ?? [], children: children ?? [], parent, childCovers };
     },
   });
 
@@ -91,7 +106,7 @@ function GalleryPage() {
     );
   }
 
-  const { event, photos, children, parent } = data;
+  const { event, photos, children, parent, childCovers } = data;
   const term = search.trim().toLowerCase();
   const visible = term
     ? photos.filter(
@@ -139,7 +154,11 @@ function GalleryPage() {
           <h2 className="font-display text-lg font-semibold">Folders</h2>
           <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
             {children.map((c) => (
-              <EventCard key={c.id} event={c} />
+              <EventCard
+                key={c.id}
+                event={c}
+                fallbackSrc={childCovers[c.id] ? previewUrl(childCovers[c.id]!) : null}
+              />
             ))}
           </div>
         </div>

@@ -47,13 +47,20 @@ function Index() {
         .from("photos")
         .select("preview_path, events!inner(id, parent_id, published)")
         .eq("events.published", true)
-        .limit(300);
+        .limit(600);
       if (error) throw error;
-      const map: Record<string, string> = {};
+      // One photo per folder, grouped under its top-level event (max 4 shown).
+      const perFolder: Record<string, { parent: string; path: string }> = {};
       for (const row of data ?? []) {
         const ev = row.events as unknown as { id: string; parent_id: string | null };
-        const key = ev.parent_id ?? ev.id;
-        if (!map[key]) map[key] = row.preview_path;
+        if (!perFolder[ev.id]) {
+          perFolder[ev.id] = { parent: ev.parent_id ?? ev.id, path: row.preview_path };
+        }
+      }
+      const map: Record<string, string[]> = {};
+      for (const entry of Object.values(perFolder)) {
+        const list = (map[entry.parent] ??= []);
+        if (list.length < 4) list.push(entry.path);
       }
       return map;
     },
@@ -94,7 +101,8 @@ function Index() {
       ) : events && events.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {events.map((e) => {
-            const cover = e.cover_url ?? (covers?.[e.id] ? previewUrl(covers[e.id]!) : null);
+            const tiles = (covers?.[e.id] ?? []).map(previewUrl);
+            const images = e.cover_url ? [e.cover_url, ...tiles].slice(0, 4) : tiles.slice(0, 4);
             return (
               <Link
                 key={e.id}
@@ -103,13 +111,24 @@ function Index() {
                 className="panel group relative overflow-hidden transition-colors hover:border-primary"
               >
                 <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
-                  {cover ? (
-                    <img
-                      src={cover}
-                      alt={e.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                  {images.length > 0 ? (
+                    <div
+                      className={`grid h-full w-full gap-px ${
+                        images.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                      } ${images.length > 2 ? "grid-rows-2" : "grid-rows-1"}`}
+                    >
+                      {images.map((src, i) => (
+                        <img
+                          key={src}
+                          src={src}
+                          alt={`${e.name} preview ${i + 1}`}
+                          loading="lazy"
+                          className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                            images.length === 3 && i === 0 ? "row-span-2" : ""
+                          }`}
+                        />
+                      ))}
+                    </div>
                   ) : (
                     <div className="sky-band flex h-full w-full items-center justify-center">
                       <span className="font-display text-xs font-semibold tracking-[0.2em] text-primary-foreground uppercase">
@@ -118,8 +137,8 @@ function Index() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center justify-between gap-2 p-3">
-                  <span className="truncate font-display text-sm font-semibold sm:text-base">
+                <div className="flex items-start justify-between gap-2 p-3">
+                  <span className="font-display text-sm font-bold break-words sm:text-base">
                     {e.name}
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
