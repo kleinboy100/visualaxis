@@ -577,6 +577,31 @@ function PhotosTab() {
       </div>
 
 
+      {eventId && (photos ?? []).length > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={async () => {
+            const { error } = await supabase
+              .from("photos")
+              .update({
+                digital_price_cents: Math.round(digital * 100),
+                print_price_cents: Math.round(print * 100),
+              })
+              .eq("event_id", eventId);
+            if (error) toast.error(error.message);
+            else {
+              toast.success("Prices applied to all photos in this folder");
+              void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+            }
+          }}
+        >
+          Apply prices above to all photos in this folder
+        </Button>
+      )}
+
       {eventId && (
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {(photos ?? []).map((photo) => (
@@ -586,29 +611,75 @@ function PhotosTab() {
                 alt={photo.title ?? "Photo"}
                 className="aspect-[3/2] w-full object-cover"
               />
-              <div className="flex items-center justify-between gap-2 p-3">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold">{photo.title ?? photo.code}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatZar(photo.digital_price_cents)} / {formatZar(photo.print_price_cents)}
-                  </p>
+              <div className="space-y-2 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold">{photo.title ?? photo.code}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatZar(photo.digital_price_cents)} / {formatZar(photo.print_price_cents)}
+                    </p>
+                  </div>
+                  <button
+                    aria-label="Delete photo"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={async () => {
+                      if (!window.confirm("Delete this photo?")) return;
+                      await supabase.storage.from("photo-previews").remove([photo.preview_path]);
+                      if (photo.original_path) {
+                        await supabase.storage.from("photo-originals").remove([photo.original_path]);
+                      }
+                      const { error } = await supabase.from("photos").delete().eq("id", photo.id);
+                      if (error) toast.error(error.message);
+                      else void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <button
-                  aria-label="Delete photo"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={async () => {
-                    if (!window.confirm("Delete this photo?")) return;
-                    await supabase.storage.from("photo-previews").remove([photo.preview_path]);
-                    if (photo.original_path) {
-                      await supabase.storage.from("photo-originals").remove([photo.original_path]);
-                    }
-                    const { error } = await supabase.from("photos").delete().eq("id", photo.id);
-                    if (error) toast.error(error.message);
-                    else void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <Input
+                    aria-label="Digital price in rand"
+                    type="number"
+                    min={1}
+                    max={100000}
+                    className="h-8 text-xs"
+                    defaultValue={photo.digital_price_cents / 100}
+                    onBlur={async (e) => {
+                      const value = Math.round(Number(e.target.value) * 100);
+                      if (!value || value === photo.digital_price_cents) return;
+                      const { error } = await supabase
+                        .from("photos")
+                        .update({ digital_price_cents: value })
+                        .eq("id", photo.id);
+                      if (error) toast.error(error.message);
+                      else {
+                        toast.success("Price updated");
+                        void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+                      }
+                    }}
+                  />
+                  <Input
+                    aria-label="Print price in rand"
+                    type="number"
+                    min={1}
+                    max={100000}
+                    className="h-8 text-xs"
+                    defaultValue={photo.print_price_cents / 100}
+                    onBlur={async (e) => {
+                      const value = Math.round(Number(e.target.value) * 100);
+                      if (!value || value === photo.print_price_cents) return;
+                      const { error } = await supabase
+                        .from("photos")
+                        .update({ print_price_cents: value })
+                        .eq("id", photo.id);
+                      if (error) toast.error(error.message);
+                      else {
+                        toast.success("Price updated");
+                        void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           ))}
@@ -693,10 +764,37 @@ function UsersTab() {
   const canManageRoles = (user?.email ?? "").toLowerCase() === OWNER_EMAIL;
   const listUsers = useServerFn(adminListUsers);
   const updateRole = useServerFn(setUserRole);
-  const { data: users, refetch } = useQuery({
+
+  const { data: users, error, isLoading, refetch } = useQuery({
     queryKey: ["admin-users"],
-    queryFn: () => listUsers({}),
+    queryFn: async () => {
+      // Direct read first (admins can read profiles + roles under RLS).
+      const [{ data: profiles, error: pErr }, { data: roles }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, email, full_name, created_at")
+          .order("created_at", { ascending: false }),
+        supabase.from("user_roles").select("user_id, role").eq("role", "admin"),
+      ]);
+      if (!pErr && profiles && profiles.length > 0) {
+        const adminIds = new Set((roles ?? []).map((r) => r.user_id));
+        return profiles.map((p) => ({ ...p, isAdmin: adminIds.has(p.id) }));
+      }
+      return await listUsers({});
+    },
   });
+
+  if (isLoading) {
+    return <div className="panel p-10 text-center text-sm text-muted-foreground">Loading users…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="panel p-10 text-center text-sm text-destructive">
+        {error instanceof Error ? error.message : "Could not load users."}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -711,18 +809,18 @@ function UsersTab() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{u.isAdmin ? "Admin" : "User"}</span>
             {canManageRoles && (
-            <Switch
-              checked={u.isAdmin}
-              onCheckedChange={async (checked) => {
-                try {
-                  await updateRole({ data: { userId: u.id, makeAdmin: checked } });
-                  await refetch();
-                  toast.success("Role updated");
-                } catch (err) {
-                  toast.error(err instanceof Error ? err.message : "Could not update role");
-                }
-              }}
-            />
+              <Switch
+                checked={u.isAdmin}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await updateRole({ data: { userId: u.id, makeAdmin: checked } });
+                    await refetch();
+                    toast.success("Role updated");
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Could not update role");
+                  }
+                }}
+              />
             )}
           </div>
         </div>
