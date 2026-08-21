@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,16 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { formatZar, previewUrl } from "@/lib/format";
 import { syncOrderStatus, getDownloadLink } from "@/lib/shop.functions";
+
+function triggerDownload(url: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
 export const Route = createFileRoute("/orders/$orderId")({
   head: () => ({
@@ -52,11 +62,45 @@ function OrderPage() {
     },
   });
 
+  const autoDownloaded = useRef(false);
+
   useEffect(() => {
     if (!user || !data || data.status === "paid") return;
-    void sync({ data: { orderId } })
-      .then(() => refetch())
-      .catch(() => undefined);
+    let cancelled = false;
+    const tick = () => {
+      void sync({ data: { orderId } })
+        .then(() => {
+          if (!cancelled) void refetch();
+        })
+        .catch(() => undefined);
+    };
+    tick();
+    const id = window.setInterval(tick, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, data?.status, orderId]);
+
+  // Automatically download purchased digital photos once payment succeeds.
+  useEffect(() => {
+    if (!user || !data || data.status !== "paid" || autoDownloaded.current) return;
+    const digital = (data.order_items ?? []).filter((i) => i.product_type === "digital");
+    if (digital.length === 0) return;
+    autoDownloaded.current = true;
+    void (async () => {
+      for (const [index, item] of digital.entries()) {
+        try {
+          const res = await download({ data: { orderId, photoId: item.photo_id } });
+          const name = `${item.photos?.code ?? item.photos?.title ?? "visual-axis-photo"}.jpg`;
+          window.setTimeout(() => triggerDownload(res.url, name), index * 700);
+        } catch {
+          /* the manual download button remains available */
+        }
+      }
+      toast.success("Payment confirmed — your photos are downloading.");
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, data?.status, orderId]);
 
