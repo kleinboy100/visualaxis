@@ -10,7 +10,14 @@ export type EventCardData = {
   cover_url: string | null;
 };
 
-export function EventCard({ event }: { event: EventCardData }) {
+export function EventCard({
+  event,
+  fallbackSrc,
+}: {
+  event: EventCardData;
+  fallbackSrc?: string | null;
+}) {
+  const cover = event.cover_url ?? fallbackSrc ?? null;
   return (
     <Link
       to="/events/$slug"
@@ -18,9 +25,9 @@ export function EventCard({ event }: { event: EventCardData }) {
       className="panel group overflow-hidden transition-colors hover:border-primary"
     >
       <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
-        {event.cover_url ? (
+        {cover ? (
           <img
-            src={event.cover_url}
+            src={cover}
             alt={event.name}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
