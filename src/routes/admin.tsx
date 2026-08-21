@@ -586,29 +586,75 @@ function PhotosTab() {
                 alt={photo.title ?? "Photo"}
                 className="aspect-[3/2] w-full object-cover"
               />
-              <div className="flex items-center justify-between gap-2 p-3">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold">{photo.title ?? photo.code}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatZar(photo.digital_price_cents)} / {formatZar(photo.print_price_cents)}
-                  </p>
+              <div className="space-y-2 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold">{photo.title ?? photo.code}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatZar(photo.digital_price_cents)} / {formatZar(photo.print_price_cents)}
+                    </p>
+                  </div>
+                  <button
+                    aria-label="Delete photo"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={async () => {
+                      if (!window.confirm("Delete this photo?")) return;
+                      await supabase.storage.from("photo-previews").remove([photo.preview_path]);
+                      if (photo.original_path) {
+                        await supabase.storage.from("photo-originals").remove([photo.original_path]);
+                      }
+                      const { error } = await supabase.from("photos").delete().eq("id", photo.id);
+                      if (error) toast.error(error.message);
+                      else void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <button
-                  aria-label="Delete photo"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={async () => {
-                    if (!window.confirm("Delete this photo?")) return;
-                    await supabase.storage.from("photo-previews").remove([photo.preview_path]);
-                    if (photo.original_path) {
-                      await supabase.storage.from("photo-originals").remove([photo.original_path]);
-                    }
-                    const { error } = await supabase.from("photos").delete().eq("id", photo.id);
-                    if (error) toast.error(error.message);
-                    else void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <Input
+                    aria-label="Digital price in rand"
+                    type="number"
+                    min={1}
+                    max={100000}
+                    className="h-8 text-xs"
+                    defaultValue={photo.digital_price_cents / 100}
+                    onBlur={async (e) => {
+                      const value = Math.round(Number(e.target.value) * 100);
+                      if (!value || value === photo.digital_price_cents) return;
+                      const { error } = await supabase
+                        .from("photos")
+                        .update({ digital_price_cents: value })
+                        .eq("id", photo.id);
+                      if (error) toast.error(error.message);
+                      else {
+                        toast.success("Price updated");
+                        void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+                      }
+                    }}
+                  />
+                  <Input
+                    aria-label="Print price in rand"
+                    type="number"
+                    min={1}
+                    max={100000}
+                    className="h-8 text-xs"
+                    defaultValue={photo.print_price_cents / 100}
+                    onBlur={async (e) => {
+                      const value = Math.round(Number(e.target.value) * 100);
+                      if (!value || value === photo.print_price_cents) return;
+                      const { error } = await supabase
+                        .from("photos")
+                        .update({ print_price_cents: value })
+                        .eq("id", photo.id);
+                      if (error) toast.error(error.message);
+                      else {
+                        toast.success("Price updated");
+                        void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           ))}
