@@ -186,7 +186,7 @@ function GalleryPage() {
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((photo) => {
             const inDigital = cart.has(photo.id, "digital");
-            const inPrint = cart.has(photo.id, "print");
+            
             return (
               <div key={photo.id} className="panel overflow-hidden">
                 <WatermarkedImage
