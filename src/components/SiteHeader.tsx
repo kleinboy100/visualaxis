@@ -40,12 +40,9 @@ export function SiteHeader() {
               height={40}
               className="h-9 w-9 shrink-0 rounded-md bg-background object-contain p-0.5 sm:h-10 sm:w-10"
             />
-            <span className="flex min-w-0 flex-col justify-center leading-none">
+            <span className="flex min-w-0 items-center leading-none">
               <span className="truncate font-display text-base font-semibold tracking-tight sm:text-lg">
-                Visual Axis
-              </span>
-              <span className="mt-1 truncate text-[9px] tracking-[0.18em] uppercase opacity-80 sm:text-[10px] sm:tracking-[0.22em]">
-                School Photos
+                Visual Axis Media
               </span>
             </span>
           </Link>
