@@ -693,10 +693,37 @@ function UsersTab() {
   const canManageRoles = (user?.email ?? "").toLowerCase() === OWNER_EMAIL;
   const listUsers = useServerFn(adminListUsers);
   const updateRole = useServerFn(setUserRole);
-  const { data: users, refetch } = useQuery({
+
+  const { data: users, error, isLoading, refetch } = useQuery({
     queryKey: ["admin-users"],
-    queryFn: () => listUsers({}),
+    queryFn: async () => {
+      // Direct read first (admins can read profiles + roles under RLS).
+      const [{ data: profiles, error: pErr }, { data: roles }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, email, full_name, created_at")
+          .order("created_at", { ascending: false }),
+        supabase.from("user_roles").select("user_id, role").eq("role", "admin"),
+      ]);
+      if (!pErr && profiles && profiles.length > 0) {
+        const adminIds = new Set((roles ?? []).map((r) => r.user_id));
+        return profiles.map((p) => ({ ...p, isAdmin: adminIds.has(p.id) }));
+      }
+      return await listUsers({});
+    },
   });
+
+  if (isLoading) {
+    return <div className="panel p-10 text-center text-sm text-muted-foreground">Loading users…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="panel p-10 text-center text-sm text-destructive">
+        {error instanceof Error ? error.message : "Could not load users."}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -711,18 +738,18 @@ function UsersTab() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{u.isAdmin ? "Admin" : "User"}</span>
             {canManageRoles && (
-            <Switch
-              checked={u.isAdmin}
-              onCheckedChange={async (checked) => {
-                try {
-                  await updateRole({ data: { userId: u.id, makeAdmin: checked } });
-                  await refetch();
-                  toast.success("Role updated");
-                } catch (err) {
-                  toast.error(err instanceof Error ? err.message : "Could not update role");
-                }
-              }}
-            />
+              <Switch
+                checked={u.isAdmin}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await updateRole({ data: { userId: u.id, makeAdmin: checked } });
+                    await refetch();
+                    toast.success("Role updated");
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Could not update role");
+                  }
+                }}
+              />
             )}
           </div>
         </div>
