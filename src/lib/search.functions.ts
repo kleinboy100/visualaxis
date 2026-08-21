@@ -27,9 +27,10 @@ export const findPhotosBySelfie = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("Photo matching is not available right now.");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { createPublicServerClient } = await import("./supabase-public.server");
+    const supabasePublic = createPublicServerClient();
 
-    let query = supabaseAdmin
+    let query = supabasePublic
       .from("photos")
       .select("id, preview_path, events!inner(slug, name, published)")
       .eq("events.published", true)
@@ -43,7 +44,7 @@ export const findPhotosBySelfie = createServerFn({ method: "POST" })
 
     const encoded: { photo: (typeof photos)[number]; dataUrl: string }[] = [];
     for (const photo of photos) {
-      const file = await supabaseAdmin.storage.from("photo-previews").download(photo.preview_path);
+      const file = await supabasePublic.storage.from("photo-previews").download(photo.preview_path);
       if (file.error || !file.data) continue;
       const buf = Buffer.from(await file.data.arrayBuffer());
       encoded.push({
