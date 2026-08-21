@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
-import logoUrl from "@/assets/visual-axis-logo.jpg";
+import logoAsset from "@/assets/visual-axis-logo.png.asset.json";
+
+const logoUrl = logoAsset.url;
 
 
 const links = [
