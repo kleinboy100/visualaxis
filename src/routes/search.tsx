@@ -163,8 +163,10 @@ function SelfieSearch({ defaultOpen }: { defaultOpen: boolean }) {
   const [busy, setBusy] = useState(false);
   const [matches, setMatches] = useState<SelfieMatch[] | null>(null);
   const [camera, setCamera] = useState(false);
+  const [starting, setStarting] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const nativeCaptureRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (defaultOpen) document.getElementById("selfie-search")?.scrollIntoView({ behavior: "smooth" });
@@ -176,35 +178,71 @@ function SelfieSearch({ defaultOpen }: { defaultOpen: boolean }) {
     setCamera(false);
   };
 
-  useEffect(() => stopCamera, []);
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }, []);
+
+  // Attach the stream once the <video> element is actually mounted.
+  useEffect(() => {
+    if (!camera) return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (video && stream && video.srcObject !== stream) {
+      video.srcObject = stream;
+      void video.play().catch(() => undefined);
+    }
+  }, [camera]);
 
   const startCamera = async () => {
+    const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
+    if (!md?.getUserMedia) {
+      // Insecure context, embedded preview without camera permission, or old browser:
+      // fall back to the device's native camera app via a file input.
+      nativeCaptureRef.current?.click();
+      return;
+    }
+    setStarting(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      let stream: MediaStream;
+      try {
+        stream = await md.getUserMedia({ video: { facingMode: "user" }, audio: false });
+      } catch {
+        // Some devices reject the facingMode constraint — retry with any camera.
+        stream = await md.getUserMedia({ video: true, audio: false });
+      }
       streamRef.current = stream;
       setCamera(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          void videoRef.current.play();
-        }
-      }, 0);
-    } catch {
-      toast.error("Could not access the camera. You can upload a photo instead.");
+    } catch (err) {
+      const name = (err as { name?: string } | null)?.name ?? "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        toast.error("Camera blocked. Allow camera access for this site, or use the native camera below.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        toast.error("No camera found on this device. Upload a photo instead.");
+      } else {
+        toast.error("Could not start the camera. Opening your device camera instead…");
+      }
+      nativeCaptureRef.current?.click();
+    } finally {
+      setStarting(false);
     }
   };
 
   const capture = () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !video.videoWidth) {
+      toast.error("Camera is still warming up — try again in a second.");
+      return;
+    }
     const canvas = document.createElement("canvas");
-    canvas.width = Math.min(video.videoWidth || 640, 720);
-    canvas.height = Math.round(((video.videoHeight || 480) / (video.videoWidth || 640)) * canvas.width);
+    canvas.width = Math.min(video.videoWidth, 720);
+    canvas.height = Math.round((video.videoHeight / video.videoWidth) * canvas.width);
     canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
     setImage(canvas.toDataURL("image/jpeg", 0.85));
     setMatches(null);
     stopCamera();
   };
+
 
   const onFile = (file: File | undefined) => {
     if (!file) return;
