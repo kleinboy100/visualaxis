@@ -41,9 +41,12 @@ export function SiteHeader() {
               height={40}
               className="h-9 w-9 shrink-0 rounded-md bg-background object-contain p-0.5 sm:h-10 sm:w-10"
             />
-            <span className="flex items-center leading-none">
-              <span className="font-display text-[15px] font-semibold tracking-tight whitespace-nowrap sm:text-lg">
-                Visual Axis Media
+            <span className="flex flex-col leading-none">
+              <span className="font-display text-[15px] font-semibold tracking-tight whitespace-nowrap uppercase sm:text-lg">
+                VISUAL AXIS
+              </span>
+              <span className="font-display text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap uppercase sm:text-xs">
+                MEDIA
               </span>
             </span>
           </Link>
