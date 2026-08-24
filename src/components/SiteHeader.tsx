@@ -69,7 +69,7 @@ export function SiteHeader() {
             <Link
               to="/search"
               search={{ selfie: true }}
-              className="hidden h-9 w-9 items-center justify-center rounded-full bg-background/20 hover:bg-background/30 sm:inline-flex"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-background/20 hover:bg-background/30"
               aria-label="Find my photos with a selfie"
             >
               <ScanFace className="h-4.5 w-4.5" />
