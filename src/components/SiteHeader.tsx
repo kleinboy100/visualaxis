@@ -45,7 +45,7 @@ export function SiteHeader() {
               <span className="font-display text-[15px] font-semibold tracking-tight whitespace-nowrap uppercase sm:text-lg">
                 VISUAL AXIS
               </span>
-              <span className="font-display text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap uppercase sm:text-xs">
+              <span className="font-display text-[15px] font-semibold tracking-tight whitespace-nowrap uppercase sm:text-lg">
                 MEDIA
               </span>
             </span>
