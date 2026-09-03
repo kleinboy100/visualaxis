@@ -98,6 +98,7 @@ function GalleryPage() {
       return {
         event,
         photos: photos ?? [],
+        ownCount: photoCount ?? photos?.length ?? 0,
         photoCount: (photoCount ?? photos?.length ?? 0) + childPhotoTotal,
         children: children ?? [],
         parent,
