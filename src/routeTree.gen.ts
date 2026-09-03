@@ -19,6 +19,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as EventsSlugRouteImport } from './routes/events.$slug'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
+import { Route as ApiPublicSelfieMatchRouteImport } from './routes/api/public/selfie-match'
 import { Route as ApiPublicYocoWebhookRouteImport } from './routes/api/public/yoco-webhook'
 import { Route as ApiPublicPreviewSplatRouteImport } from './routes/api/public/preview/$'
 
@@ -72,6 +73,11 @@ const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
   path: '/orders/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSelfieMatchRoute = ApiPublicSelfieMatchRouteImport.update({
+  id: '/api/public/selfie-match',
+  path: '/api/public/selfie-match',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicYocoWebhookRoute = ApiPublicYocoWebhookRouteImport.update({
   id: '/api/public/yoco-webhook',
   path: '/api/public/yoco-webhook',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/events/$slug': typeof EventsSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events/': typeof EventsIndexRoute
+  '/api/public/selfie-match': typeof ApiPublicSelfieMatchRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
   '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
 }
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/events/$slug': typeof EventsSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events': typeof EventsIndexRoute
+  '/api/public/selfie-match': typeof ApiPublicSelfieMatchRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
   '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/events/$slug': typeof EventsSlugRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/events/': typeof EventsIndexRoute
+  '/api/public/selfie-match': typeof ApiPublicSelfieMatchRoute
   '/api/public/yoco-webhook': typeof ApiPublicYocoWebhookRoute
   '/api/public/preview/$': typeof ApiPublicPreviewSplatRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/events/$slug'
     | '/orders/$orderId'
     | '/events/'
+    | '/api/public/selfie-match'
     | '/api/public/yoco-webhook'
     | '/api/public/preview/$'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/events/$slug'
     | '/orders/$orderId'
     | '/events'
+    | '/api/public/selfie-match'
     | '/api/public/yoco-webhook'
     | '/api/public/preview/$'
   id:
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/events/$slug'
     | '/orders/$orderId'
     | '/events/'
+    | '/api/public/selfie-match'
     | '/api/public/yoco-webhook'
     | '/api/public/preview/$'
   fileRoutesById: FileRoutesById
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   EventsSlugRoute: typeof EventsSlugRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  ApiPublicSelfieMatchRoute: typeof ApiPublicSelfieMatchRoute
   ApiPublicYocoWebhookRoute: typeof ApiPublicYocoWebhookRoute
   ApiPublicPreviewSplatRoute: typeof ApiPublicPreviewSplatRoute
 }
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/selfie-match': {
+      id: '/api/public/selfie-match'
+      path: '/api/public/selfie-match'
+      fullPath: '/api/public/selfie-match'
+      preLoaderRoute: typeof ApiPublicSelfieMatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/yoco-webhook': {
       id: '/api/public/yoco-webhook'
       path: '/api/public/yoco-webhook'
@@ -286,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsSlugRoute: EventsSlugRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   EventsIndexRoute: EventsIndexRoute,
+  ApiPublicSelfieMatchRoute: ApiPublicSelfieMatchRoute,
   ApiPublicYocoWebhookRoute: ApiPublicYocoWebhookRoute,
   ApiPublicPreviewSplatRoute: ApiPublicPreviewSplatRoute,
 }
