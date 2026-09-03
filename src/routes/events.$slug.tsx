@@ -80,15 +80,17 @@ function GalleryPage() {
       if (photoErr) throw photoErr;
 
       const childCovers: Record<string, string> = {};
+      let childPhotoTotal = 0;
       if (children && children.length > 0) {
-        const { data: childPhotos } = await supabase
-          .from("photos")
-          .select("event_id, preview_path")
-          .in(
-            "event_id",
-            children.map((c) => c.id),
-          )
-          .limit(240);
+        const childIds = children.map((c) => c.id);
+        const [{ data: childPhotos }, { count: childCount }] = await Promise.all([
+          supabase.from("photos").select("event_id, preview_path").in("event_id", childIds).limit(240),
+          supabase
+            .from("photos")
+            .select("id", { count: "exact", head: true })
+            .in("event_id", childIds),
+        ]);
+        childPhotoTotal = childCount ?? 0;
         for (const row of childPhotos ?? []) {
           if (!childCovers[row.event_id]) childCovers[row.event_id] = row.preview_path;
         }
@@ -96,7 +98,7 @@ function GalleryPage() {
       return {
         event,
         photos: photos ?? [],
-        photoCount: photoCount ?? photos?.length ?? 0,
+        photoCount: (photoCount ?? photos?.length ?? 0) + childPhotoTotal,
         children: children ?? [],
         parent,
         childCovers,
