@@ -47,7 +47,7 @@ function Index() {
         .from("photos")
         .select("preview_path, events!inner(id, parent_id, published)")
         .eq("events.published", true)
-        .limit(600);
+        .limit(240);
       if (error) throw error;
       // One photo per folder, grouped under its top-level event (max 4 shown).
       const perFolder: Record<string, { parent: string; path: string }> = {};
@@ -123,6 +123,7 @@ function Index() {
                           src={src}
                           alt={`${e.name} preview ${i + 1}`}
                           loading="lazy"
+                          decoding="async"
                           className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
                             images.length === 3 && i === 0 ? "row-span-2" : ""
                           }`}
