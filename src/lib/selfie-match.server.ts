@@ -17,10 +17,10 @@ export function getAiKey(): string | undefined {
   );
 }
 
-const MAX_PHOTOS = 240; // how many published photos a single search covers
+const MAX_PHOTOS = 150; // how many published photos a single search covers
 const BATCH_SIZE = 8; // event photos compared per model request
 const BATCH_CONCURRENCY = 6; // model requests in flight
-const DOWNLOAD_CONCURRENCY = 16;
+const DOWNLOAD_CONCURRENCY = 10;
 const MODEL = "google/gemini-2.5-flash";
 
 type PhotoRow = {
