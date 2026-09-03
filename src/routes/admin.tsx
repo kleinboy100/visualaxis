@@ -554,7 +554,7 @@ function PhotosTab() {
               {eventId ? "Drag and drop photos here" : "Select an event first"}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Bulk upload — hundreds of files at a time, 4 uploaded in parallel.
+              Bulk upload — hundreds of files at a time, 8 uploaded in parallel.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <label
