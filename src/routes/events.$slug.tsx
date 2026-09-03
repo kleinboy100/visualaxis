@@ -125,7 +125,7 @@ function GalleryPage() {
     );
   }
 
-  const { event, photos, photoCount, children, parent, childCovers } = data;
+  const { event, photos, photoCount, ownCount, children, parent, childCovers } = data;
   const term = search.trim().toLowerCase();
   const visible = term
     ? photos.filter(
