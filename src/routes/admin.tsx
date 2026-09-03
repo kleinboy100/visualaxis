@@ -393,9 +393,9 @@ function PhotosTab() {
       bitmap.close?.();
       const blob =
         "convertToBlob" in canvas
-          ? await (canvas as OffscreenCanvas).convertToBlob({ type: "image/jpeg", quality: 0.72 })
+          ? await (canvas as OffscreenCanvas).convertToBlob({ type: "image/jpeg", quality: 0.7 })
           : await new Promise<Blob | null>((res) =>
-              (canvas as HTMLCanvasElement).toBlob(res, "image/jpeg", 0.72),
+              (canvas as HTMLCanvasElement).toBlob(res, "image/jpeg", 0.7),
             );
       return blob ?? file;
     } catch {
@@ -403,36 +403,33 @@ function PhotosTab() {
     }
   };
 
-  const uploadOne = async (file: File, index: number) => {
+  // Only the small preview blocks the visible upload progress; the heavy
+  // original is uploaded afterwards in the background.
+  const uploadPreview = async (file: File, index: number) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
     const key = `${eventId}/${crypto.randomUUID()}.${ext}`;
     const contentType = file.type || "image/jpeg";
     const preview = await makePreview(file);
 
-    const [previewRes, originalRes] = await Promise.all([
-      supabase.storage
-        .from("photo-previews")
-        .upload(key, preview, {
-          cacheControl: "31536000",
-          contentType: preview === file ? contentType : "image/jpeg",
-          upsert: false,
-        }),
-      supabase.storage.from("photo-originals").upload(key, file, {
-        cacheControl: "31536000",
-        contentType,
-        upsert: false,
-      }),
-    ]);
-    if (previewRes.error) throw new Error(previewRes.error.message);
+    const { error } = await supabase.storage.from("photo-previews").upload(key, preview, {
+      cacheControl: "31536000",
+      contentType: preview === file ? contentType : "image/jpeg",
+      upsert: false,
+    });
+    if (error) throw new Error(error.message);
 
     return {
-      event_id: eventId,
-      title: file.name.replace(/\.[^.]+$/, "").slice(0, 120),
-      code: `${codePrefix.trim()}${String(index + 1).padStart(4, "0")}`.slice(0, 40),
-      preview_path: key,
-      original_path: originalRes.error ? null : key,
-      digital_price_cents: Math.round(digital * 100),
-      print_price_cents: Math.round(print * 100),
+      key,
+      contentType,
+      row: {
+        event_id: eventId,
+        title: file.name.replace(/\.[^.]+$/, "").slice(0, 120),
+        code: `${codePrefix.trim()}${String(index + 1).padStart(4, "0")}`.slice(0, 40),
+        preview_path: key,
+        original_path: key,
+        digital_price_cents: Math.round(digital * 100),
+        print_price_cents: Math.round(print * 100),
+      },
     };
   };
 
@@ -447,12 +444,11 @@ function PhotosTab() {
     setUploading(true);
     setProgress({ done: 0, total: files.length, failed: 0 });
 
-    // Six workers keep typical broadband busy without overwhelming mobile
-    // devices with 16 simultaneous image decodes and network requests.
-    const CONCURRENCY = 6;
+    const CONCURRENCY = 8;
     let cursor = 0;
     let failed = 0;
     const rows: Record<string, unknown>[] = [];
+    const originals: { key: string; file: File; contentType: string }[] = [];
 
     // Insert DB rows in batches instead of one round-trip per file.
     const flush = async (force = false) => {
@@ -470,7 +466,9 @@ function PhotosTab() {
         const i = cursor++;
         const file = files[i]!;
         try {
-          rows.push(await uploadOne(file, startIndex + i));
+          const { key, contentType, row } = await uploadPreview(file, startIndex + i);
+          rows.push(row);
+          originals.push({ key, file, contentType });
         } catch (err) {
           failed += 1;
           console.error("Upload failed", file.name, err);
@@ -487,7 +485,28 @@ function PhotosTab() {
     if (ok > 0) toast.success(`${ok} photo${ok > 1 ? "s" : ""} uploaded`);
     if (failed > 0) toast.error(`${failed} file${failed > 1 ? "s" : ""} could not be uploaded`);
     void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+
+    // Background: push the full-resolution originals used for paid downloads.
+    void (async () => {
+      let oCursor = 0;
+      const oWorker = async () => {
+        while (oCursor < originals.length) {
+          const item = originals[oCursor++]!;
+          const { error } = await supabase.storage
+            .from("photo-originals")
+            .upload(item.key, item.file, {
+              cacheControl: "31536000",
+              contentType: item.contentType,
+              upsert: true,
+            });
+          if (error) console.error("Original upload failed", item.key, error);
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, originals.length) }, oWorker));
+    })();
   };
+
+
 
 
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
