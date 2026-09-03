@@ -261,7 +261,7 @@ function GalleryPage() {
       {!term && photos.length < ownCount && (
         <div className="mt-8 flex justify-center">
           <Button type="button" variant="outline" onClick={() => setPhotoLimit((value) => value + 48)}>
-            Load more photos ({photoCount - photos.length} remaining)
+            Load more photos ({ownCount - photos.length} remaining)
           </Button>
         </div>
       )}
