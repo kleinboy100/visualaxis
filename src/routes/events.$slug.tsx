@@ -80,15 +80,17 @@ function GalleryPage() {
       if (photoErr) throw photoErr;
 
       const childCovers: Record<string, string> = {};
+      let childPhotoTotal = 0;
       if (children && children.length > 0) {
-        const { data: childPhotos } = await supabase
-          .from("photos")
-          .select("event_id, preview_path")
-          .in(
-            "event_id",
-            children.map((c) => c.id),
-          )
-          .limit(240);
+        const childIds = children.map((c) => c.id);
+        const [{ data: childPhotos }, { count: childCount }] = await Promise.all([
+          supabase.from("photos").select("event_id, preview_path").in("event_id", childIds).limit(240),
+          supabase
+            .from("photos")
+            .select("id", { count: "exact", head: true })
+            .in("event_id", childIds),
+        ]);
+        childPhotoTotal = childCount ?? 0;
         for (const row of childPhotos ?? []) {
           if (!childCovers[row.event_id]) childCovers[row.event_id] = row.preview_path;
         }
@@ -96,7 +98,8 @@ function GalleryPage() {
       return {
         event,
         photos: photos ?? [],
-        photoCount: photoCount ?? photos?.length ?? 0,
+        ownCount: photoCount ?? photos?.length ?? 0,
+        photoCount: (photoCount ?? photos?.length ?? 0) + childPhotoTotal,
         children: children ?? [],
         parent,
         childCovers,
@@ -122,7 +125,7 @@ function GalleryPage() {
     );
   }
 
-  const { event, photos, photoCount, children, parent, childCovers } = data;
+  const { event, photos, photoCount, ownCount, children, parent, childCovers } = data;
   const term = search.trim().toLowerCase();
   const visible = term
     ? photos.filter(
@@ -255,10 +258,10 @@ function GalleryPage() {
           })}
         </div>
       )}
-      {!term && photos.length < photoCount && (
+      {!term && photos.length < ownCount && (
         <div className="mt-8 flex justify-center">
           <Button type="button" variant="outline" onClick={() => setPhotoLimit((value) => value + 48)}>
-            Load more photos ({photoCount - photos.length} remaining)
+            Load more photos ({ownCount - photos.length} remaining)
           </Button>
         </div>
       )}

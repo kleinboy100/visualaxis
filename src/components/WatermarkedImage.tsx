@@ -13,6 +13,15 @@ export function WatermarkedImage({ src, alt, className }: Props) {
         loading="lazy"
         decoding="async"
         className="h-full w-full object-cover"
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (img.dataset['retried']) {
+            img.style.visibility = "hidden";
+            return;
+          }
+          img.dataset['retried'] = "1";
+          img.src = `${src}${src.includes("?") ? "&" : "?"}r=1`;
+        }}
       />
       <div className="watermark pointer-events-none absolute inset-0" aria-hidden />
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
