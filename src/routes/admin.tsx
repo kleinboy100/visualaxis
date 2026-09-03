@@ -676,7 +676,13 @@ function PhotosTab() {
                 alt={photo.title ?? "Photo"}
                 loading="lazy"
                 decoding="async"
-                className="aspect-[3/2] w-full object-cover"
+                className="aspect-[3/2] w-full bg-muted object-cover"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (img.dataset['retried']) return;
+                  img.dataset['retried'] = "1";
+                  img.src = `${previewUrl(photo.preview_path)}?r=1`;
+                }}
               />
               <div className="space-y-2 p-3">
                 <div className="flex items-center justify-between gap-2">
