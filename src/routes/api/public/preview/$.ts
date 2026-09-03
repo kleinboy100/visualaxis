@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/public/preview/$")({
         // Resize at the storage edge so old multi-megabyte previews do not make
         // visitors download the original preview dimensions for small cards.
         const base = url.replace(/\/$/, "");
-        const renderUrl = `${base}/storage/v1/render/image/authenticated/photo-previews/${path}?width=1200&quality=72&resize=contain`;
+        const renderUrl = `${base}/storage/v1/render/image/authenticated/photo-previews/${path}?width=900&quality=65&resize=contain`;
         const rawUrl = `${base}/storage/v1/object/authenticated/photo-previews/${path}`;
         const headers = new Headers({ apikey: key });
         // Legacy anon keys are JWTs and may also be sent as a bearer token.
