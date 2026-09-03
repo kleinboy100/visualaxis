@@ -29,7 +29,9 @@ export const Route = createFileRoute("/api/public/preview/$")({
 
         // Resize at the storage edge so old multi-megabyte previews do not make
         // visitors download the original preview dimensions for small cards.
-        const objectUrl = `${url.replace(/\/$/, "")}/storage/v1/render/image/authenticated/photo-previews/${path}?width=1200&quality=72&resize=contain`;
+        const base = url.replace(/\/$/, "");
+        const renderUrl = `${base}/storage/v1/render/image/authenticated/photo-previews/${path}?width=1200&quality=72&resize=contain`;
+        const rawUrl = `${base}/storage/v1/object/authenticated/photo-previews/${path}`;
         const headers = new Headers({ apikey: key });
         // Legacy anon keys are JWTs and may also be sent as a bearer token.
         if (key.split(".").length === 3) headers.set("Authorization", `Bearer ${key}`);
@@ -37,7 +39,12 @@ export const Route = createFileRoute("/api/public/preview/$")({
           const value = request.headers.get(name);
           if (value) headers.set(name, value);
         }
-        const upstream = await fetch(objectUrl, { headers });
+        let upstream = await fetch(renderUrl, { headers });
+        // The image transformer can rate-limit or reject some files; serving the
+        // stored preview is better than showing a broken image.
+        if (upstream.status !== 304 && (!upstream.ok || !upstream.body)) {
+          upstream = await fetch(rawUrl, { headers });
+        }
         if (upstream.status === 304) {
           return new Response(null, {
             status: 304,
