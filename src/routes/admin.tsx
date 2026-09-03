@@ -366,18 +366,54 @@ function PhotosTab() {
     },
   });
 
+  // Downscale in the browser so the preview upload is a few hundred KB
+  // instead of a full-size original. Falls back to the original file.
+  const makePreview = async (file: File): Promise<Blob> => {
+    try {
+      const MAX = 1600;
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
+      if (scale === 1 && file.size < 600_000) {
+        bitmap.close?.();
+        return file;
+      }
+      const w = Math.round(bitmap.width * scale);
+      const h = Math.round(bitmap.height * scale);
+      const canvas =
+        typeof OffscreenCanvas !== "undefined"
+          ? new OffscreenCanvas(w, h)
+          : Object.assign(document.createElement("canvas"), { width: w, height: h });
+      const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | null;
+      if (!ctx) return file;
+      ctx.drawImage(bitmap as unknown as CanvasImageSource, 0, 0, w, h);
+      bitmap.close?.();
+      const blob =
+        "convertToBlob" in canvas
+          ? await (canvas as OffscreenCanvas).convertToBlob({ type: "image/jpeg", quality: 0.8 })
+          : await new Promise<Blob | null>((res) =>
+              (canvas as HTMLCanvasElement).toBlob(res, "image/jpeg", 0.8),
+            );
+      return blob ?? file;
+    } catch {
+      return file;
+    }
+  };
+
   const uploadOne = async (file: File, index: number) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
     const key = `${eventId}/${crypto.randomUUID()}.${ext}`;
     const contentType = file.type || "image/jpeg";
-    const previewRes = await supabase.storage
-      .from("photo-previews")
-      .upload(key, file, { contentType, upsert: false });
+    const preview = await makePreview(file);
+
+    const [previewRes, originalRes] = await Promise.all([
+      supabase.storage
+        .from("photo-previews")
+        .upload(key, preview, { contentType: preview === file ? contentType : "image/jpeg", upsert: false }),
+      supabase.storage.from("photo-originals").upload(key, file, { contentType, upsert: false }),
+    ]);
     if (previewRes.error) throw new Error(previewRes.error.message);
-    const originalRes = await supabase.storage
-      .from("photo-originals")
-      .upload(key, file, { contentType, upsert: false });
-    const { error } = await supabase.from("photos").insert({
+
+    return {
       event_id: eventId,
       title: file.name.replace(/\.[^.]+$/, "").slice(0, 120),
       code: `${codePrefix.trim()}${String(index + 1).padStart(4, "0")}`.slice(0, 40),
@@ -385,8 +421,7 @@ function PhotosTab() {
       original_path: originalRes.error ? null : key,
       digital_price_cents: Math.round(digital * 100),
       print_price_cents: Math.round(print * 100),
-    });
-    if (error) throw new Error(error.message);
+    };
   };
 
   const bulkUpload = async (fileList: FileList | File[] | null) => {
@@ -400,23 +435,38 @@ function PhotosTab() {
     setUploading(true);
     setProgress({ done: 0, total: files.length, failed: 0 });
 
-    const CONCURRENCY = 4;
+    const CONCURRENCY = 8;
     let cursor = 0;
     let failed = 0;
+    const rows: Record<string, unknown>[] = [];
+
+    // Insert DB rows in batches instead of one round-trip per file.
+    const flush = async (force = false) => {
+      if (rows.length === 0 || (!force && rows.length < 25)) return;
+      const batch = rows.splice(0, rows.length);
+      const { error } = await supabase.from("photos").insert(batch as never);
+      if (error) {
+        failed += batch.length;
+        console.error("Insert failed", error);
+      }
+    };
+
     const worker = async () => {
       while (cursor < files.length) {
         const i = cursor++;
         const file = files[i]!;
         try {
-          await uploadOne(file, startIndex + i);
+          rows.push(await uploadOne(file, startIndex + i));
         } catch (err) {
           failed += 1;
           console.error("Upload failed", file.name, err);
         }
         setProgress((p) => ({ ...p, done: p.done + 1, failed }));
+        await flush();
       }
     };
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker));
+    await flush(true);
 
     setUploading(false);
     const ok = files.length - failed;
@@ -424,6 +474,7 @@ function PhotosTab() {
     if (failed > 0) toast.error(`${failed} file${failed > 1 ? "s" : ""} could not be uploaded`);
     void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
   };
+
 
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
