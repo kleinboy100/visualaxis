@@ -27,7 +27,9 @@ export const Route = createFileRoute("/api/public/preview/$")({
           return new Response("Preview service not configured", { status: 500 });
         }
 
-        const objectUrl = `${url.replace(/\/$/, "")}/storage/v1/object/photo-previews/${path}`;
+        // Resize at the storage edge so old multi-megabyte previews do not make
+        // visitors download the original preview dimensions for small cards.
+        const objectUrl = `${url.replace(/\/$/, "")}/storage/v1/render/image/authenticated/photo-previews/${path}?width=1200&quality=72&resize=contain`;
         const headers = new Headers({ apikey: key });
         // Legacy anon keys are JWTs and may also be sent as a bearer token.
         if (key.split(".").length === 3) headers.set("Authorization", `Bearer ${key}`);
