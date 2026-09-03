@@ -39,7 +39,11 @@ export const Route = createFileRoute("/api/public/preview/$")({
         return new Response(await upstream.arrayBuffer(), {
           headers: {
             "content-type": upstream.headers.get("content-type") ?? "image/jpeg",
-            "cache-control": "public, max-age=86400",
+            // Photo keys are UUID-based and immutable. Let both the browser and
+            // the hosting CDN keep previews so repeat gallery visits avoid this route.
+            "cache-control": "public, max-age=31536000, s-maxage=31536000, immutable",
+            "cdn-cache-control": "public, max-age=31536000, immutable",
+            "netlify-cdn-cache-control": "public, durable, max-age=31536000, immutable",
           },
         });
       },

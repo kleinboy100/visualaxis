@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, MapPin, Check, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,9 +36,15 @@ function GalleryPage() {
   const { slug } = Route.useParams();
   const cart = useCart();
   const [search, setSearch] = useState("");
+  const [photoLimit, setPhotoLimit] = useState(48);
+
+  useEffect(() => {
+    setPhotoLimit(48);
+    setSearch("");
+  }, [slug]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["event", slug],
+    queryKey: ["event", slug, photoLimit],
     queryFn: async () => {
       const { data: event, error } = await supabase
         .from("events")
@@ -47,27 +53,30 @@ function GalleryPage() {
         .maybeSingle();
       if (error) throw error;
       if (!event) return null;
-      const { data: children, error: childErr } = await supabase
-        .from("events")
-        .select("id, name, slug, location, event_date, cover_url")
-        .eq("parent_id", event.id)
-        .eq("published", true)
-        .order("name");
-      if (childErr) throw childErr;
-      let parent: { name: string; slug: string } | null = null;
-      if (event.parent_id) {
-        const { data: p } = await supabase
+      const [childrenResult, parentResult, photosResult] = await Promise.all([
+        supabase
           .from("events")
-          .select("name, slug")
-          .eq("id", event.parent_id)
-          .maybeSingle();
-        parent = p ?? null;
-      }
-      const { data: photos, error: photoErr } = await supabase
-        .from("photos")
-        .select("id, title, code, preview_path, digital_price_cents, print_price_cents")
-        .eq("event_id", event.id)
-        .order("created_at", { ascending: true });
+          .select("id, name, slug, location, event_date, cover_url")
+          .eq("parent_id", event.id)
+          .eq("published", true)
+          .order("name"),
+        event.parent_id
+          ? supabase.from("events").select("name, slug").eq("id", event.parent_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from("photos")
+          .select("id, title, code, preview_path, digital_price_cents, print_price_cents", {
+            count: "exact",
+          })
+          .eq("event_id", event.id)
+          .order("created_at", { ascending: true })
+          .limit(photoLimit),
+      ]);
+      const { data: children, error: childErr } = childrenResult;
+      const { data: photos, error: photoErr, count: photoCount } = photosResult;
+      const parent = parentResult.data ?? null;
+      if (parentResult.error) throw parentResult.error;
+      if (childErr) throw childErr;
       if (photoErr) throw photoErr;
 
       const childCovers: Record<string, string> = {};
@@ -79,12 +88,19 @@ function GalleryPage() {
             "event_id",
             children.map((c) => c.id),
           )
-          .limit(400);
+          .limit(240);
         for (const row of childPhotos ?? []) {
           if (!childCovers[row.event_id]) childCovers[row.event_id] = row.preview_path;
         }
       }
-      return { event, photos: photos ?? [], children: children ?? [], parent, childCovers };
+      return {
+        event,
+        photos: photos ?? [],
+        photoCount: photoCount ?? photos?.length ?? 0,
+        children: children ?? [],
+        parent,
+        childCovers,
+      };
     },
   });
 
@@ -106,7 +122,7 @@ function GalleryPage() {
     );
   }
 
-  const { event, photos, children, parent, childCovers } = data;
+  const { event, photos, photoCount, children, parent, childCovers } = data;
   const term = search.trim().toLowerCase();
   const visible = term
     ? photos.filter(
@@ -145,7 +161,7 @@ function GalleryPage() {
             {event.location}
           </span>
         )}
-        <span>{photos.length} photos</span>
+        <span>{photoCount} photos</span>
       </div>
       <div className="axis-rule mt-6" />
 
@@ -237,6 +253,13 @@ function GalleryPage() {
               </div>
             );
           })}
+        </div>
+      )}
+      {!term && photos.length < photoCount && (
+        <div className="mt-8 flex justify-center">
+          <Button type="button" variant="outline" onClick={() => setPhotoLimit((value) => value + 48)}>
+            Load more photos ({photoCount - photos.length} remaining)
+          </Button>
         </div>
       )}
     </div>

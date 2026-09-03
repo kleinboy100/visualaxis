@@ -349,31 +349,35 @@ function PhotosTab() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
   const [dragging, setDragging] = useState(false);
+  const [photoLimit, setPhotoLimit] = useState(48);
   const filesInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: photos } = useQuery({
-    queryKey: ["admin-photos", eventId],
+  const { data: photoResult } = useQuery({
+    queryKey: ["admin-photos", eventId, photoLimit],
     enabled: !!eventId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("photos")
-        .select("id, title, code, preview_path, original_path, digital_price_cents, print_price_cents")
+        .select("id, title, code, preview_path, original_path, digital_price_cents, print_price_cents", { count: "exact" })
         .eq("event_id", eventId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(photoLimit);
       if (error) throw error;
-      return data;
+      return { photos: data, count: count ?? data.length };
     },
   });
+  const photos = photoResult?.photos;
+  const photoCount = photoResult?.count ?? 0;
 
-  // Downscale in the browser so the preview upload is a few hundred KB
+  // Downscale in the browser so gallery previews upload and display quickly.
   // instead of a full-size original. Falls back to the original file.
   const makePreview = async (file: File): Promise<Blob> => {
     try {
-      const MAX = 1600;
+      const MAX = 1200;
       const bitmap = await createImageBitmap(file);
       const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
-      if (scale === 1 && file.size < 600_000) {
+      if (scale === 1 && file.size < 300_000) {
         bitmap.close?.();
         return file;
       }
@@ -389,9 +393,9 @@ function PhotosTab() {
       bitmap.close?.();
       const blob =
         "convertToBlob" in canvas
-          ? await (canvas as OffscreenCanvas).convertToBlob({ type: "image/jpeg", quality: 0.8 })
+          ? await (canvas as OffscreenCanvas).convertToBlob({ type: "image/jpeg", quality: 0.72 })
           : await new Promise<Blob | null>((res) =>
-              (canvas as HTMLCanvasElement).toBlob(res, "image/jpeg", 0.8),
+              (canvas as HTMLCanvasElement).toBlob(res, "image/jpeg", 0.72),
             );
       return blob ?? file;
     } catch {
@@ -408,8 +412,16 @@ function PhotosTab() {
     const [previewRes, originalRes] = await Promise.all([
       supabase.storage
         .from("photo-previews")
-        .upload(key, preview, { contentType: preview === file ? contentType : "image/jpeg", upsert: false }),
-      supabase.storage.from("photo-originals").upload(key, file, { contentType, upsert: false }),
+        .upload(key, preview, {
+          cacheControl: "31536000",
+          contentType: preview === file ? contentType : "image/jpeg",
+          upsert: false,
+        }),
+      supabase.storage.from("photo-originals").upload(key, file, {
+        cacheControl: "31536000",
+        contentType,
+        upsert: false,
+      }),
     ]);
     if (previewRes.error) throw new Error(previewRes.error.message);
 
@@ -431,11 +443,13 @@ function PhotosTab() {
       toast.error("No image files found in that selection.");
       return;
     }
-    const startIndex = photos?.length ?? 0;
+    const startIndex = photoCount;
     setUploading(true);
     setProgress({ done: 0, total: files.length, failed: 0 });
 
-    const CONCURRENCY = 8;
+    // Six workers keep typical broadband busy without overwhelming mobile
+    // devices with 16 simultaneous image decodes and network requests.
+    const CONCURRENCY = 6;
     let cursor = 0;
     let failed = 0;
     const rows: Record<string, unknown>[] = [];
@@ -554,7 +568,7 @@ function PhotosTab() {
               {eventId ? "Drag and drop photos here" : "Select an event first"}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Bulk upload — hundreds of files at a time, 8 uploaded in parallel.
+              Bulk upload — hundreds of files at a time, optimized in parallel.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <label
@@ -660,6 +674,8 @@ function PhotosTab() {
               <img
                 src={previewUrl(photo.preview_path)}
                 alt={photo.title ?? "Photo"}
+                loading="lazy"
+                decoding="async"
                 className="aspect-[3/2] w-full object-cover"
               />
               <div className="space-y-2 p-3">
@@ -740,6 +756,11 @@ function PhotosTab() {
             </div>
           )}
         </div>
+      )}
+      {eventId && photos && photos.length < photoCount && (
+        <Button type="button" variant="outline" onClick={() => setPhotoLimit((value) => value + 48)}>
+          Load more photos ({photoCount - photos.length} remaining)
+        </Button>
       )}
     </div>
   );
