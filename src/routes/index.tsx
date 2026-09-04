@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ScanFace } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { previewUrl } from "@/lib/format";
+import { fetchFolderCovers, tilePathsFor } from "@/lib/covers";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -97,8 +98,12 @@ function Index() {
       ) : events && events.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {events.map((e) => {
-            const tiles = (covers?.[e.id] ?? []).map(previewUrl);
-            const images = e.cover_url ? [e.cover_url, ...tiles].slice(0, 4) : tiles.slice(0, 4);
+            const tiles = tilePathsFor(e.id, descendants[e.id] ?? [], covers ?? {}, 4).map(
+              previewUrl,
+            );
+            const images: string[] = e.cover_url
+              ? [e.cover_url, ...tiles].slice(0, 4)
+              : tiles.slice(0, 4);
             return (
               <Link
                 key={e.id}
