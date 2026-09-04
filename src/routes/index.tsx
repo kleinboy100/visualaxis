@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ScanFace } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { previewUrl } from "@/lib/format";
+import { fetchFolderCovers, tilePathsFor } from "@/lib/covers";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,45 +27,41 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { data: events, isLoading } = useQuery({
-    queryKey: ["home-events"],
+  const { data: allEvents, isLoading } = useQuery({
+    queryKey: ["home-events-tree"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("id, name, slug, cover_url, event_date, location")
-        .is("parent_id", null)
+        .select("id, name, slug, cover_url, event_date, location, parent_id")
         .eq("published", true)
         .order("event_date", { ascending: false });
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
 
+  const events = (allEvents ?? []).filter((e) => !e.parent_id);
+
+  const descendants: Record<string, string[]> = {};
+  if (allEvents) {
+    const childrenOf: Record<string, string[]> = {};
+    for (const e of allEvents) {
+      if (e.parent_id) (childrenOf[e.parent_id] ??= []).push(e.id);
+    }
+    const collect = (id: string): string[] => {
+      const kids = childrenOf[id] ?? [];
+      return kids.flatMap((k) => [k, ...collect(k)]);
+    };
+    for (const e of events) descendants[e.id] = collect(e.id);
+  }
+
+  const coverIds = allEvents?.map((e) => e.id) ?? [];
   const { data: covers } = useQuery({
-    queryKey: ["home-event-covers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("photos")
-        .select("preview_path, events!inner(id, parent_id, published)")
-        .eq("events.published", true)
-        .limit(240);
-      if (error) throw error;
-      // One photo per folder, grouped under its top-level event (max 4 shown).
-      const perFolder: Record<string, { parent: string; path: string }> = {};
-      for (const row of data ?? []) {
-        const ev = row.events as unknown as { id: string; parent_id: string | null };
-        if (!perFolder[ev.id]) {
-          perFolder[ev.id] = { parent: ev.parent_id ?? ev.id, path: row.preview_path };
-        }
-      }
-      const map: Record<string, string[]> = {};
-      for (const entry of Object.values(perFolder)) {
-        const list = (map[entry.parent] ??= []);
-        if (list.length < 4) list.push(entry.path);
-      }
-      return map;
-    },
+    queryKey: ["home-folder-covers", coverIds.join(",")],
+    enabled: coverIds.length > 0,
+    queryFn: () => fetchFolderCovers(coverIds),
   });
+
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -101,8 +98,12 @@ function Index() {
       ) : events && events.length > 0 ? (
         <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {events.map((e) => {
-            const tiles = (covers?.[e.id] ?? []).map(previewUrl);
-            const images = e.cover_url ? [e.cover_url, ...tiles].slice(0, 4) : tiles.slice(0, 4);
+            const tiles = tilePathsFor(e.id, descendants[e.id] ?? [], covers ?? {}, 4).map(
+              previewUrl,
+            );
+            const images: string[] = e.cover_url
+              ? [e.cover_url, ...tiles].slice(0, 4)
+              : tiles.slice(0, 4);
             return (
               <Link
                 key={e.id}
