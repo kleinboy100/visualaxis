@@ -451,15 +451,32 @@ function PhotosTab() {
     const originals: { key: string; file: File; contentType: string }[] = [];
 
     // Insert DB rows in batches instead of one round-trip per file.
-    const flush = async (force = false) => {
-      if (rows.length === 0 || (!force && rows.length < 25)) return;
-      const batch = rows.splice(0, rows.length);
-      const { error } = await supabase.from("photos").insert(batch as never);
-      if (error) {
-        failed += batch.length;
+    // Failures are retried, then split per-row, so an uploaded image never
+    // ends up in storage without a gallery entry.
+    let flushing: Promise<void> = Promise.resolve();
+    const insertRows = async (batch: Record<string, unknown>[]) => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { error } = await supabase.from("photos").insert(batch as never);
+        if (!error) return true;
         console.error("Insert failed", error);
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       }
+      return false;
     };
+    const flush = async (force = false) => {
+      const run = flushing.then(async () => {
+        if (rows.length === 0 || (!force && rows.length < 25)) return;
+        const batch = rows.splice(0, rows.length);
+        if (await insertRows(batch)) return;
+        // Fall back to one row at a time so a single bad row can't drop the rest.
+        for (const row of batch) {
+          if (!(await insertRows([row]))) failed += 1;
+        }
+      });
+      flushing = run.catch(() => {});
+      return run;
+    };
+
 
     const worker = async () => {
       while (cursor < files.length) {
