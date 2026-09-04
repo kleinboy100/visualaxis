@@ -10,6 +10,7 @@ import { useCart } from "@/hooks/useCart";
 import { formatZar, previewUrl } from "@/lib/format";
 import { WatermarkedImage } from "@/components/WatermarkedImage";
 import { EventCard } from "@/components/EventCard";
+import { fetchFolderCovers } from "@/lib/covers";
 
 export const Route = createFileRoute("/events/$slug")({
   head: ({ params }) => {
@@ -79,22 +80,32 @@ function GalleryPage() {
       if (childErr) throw childErr;
       if (photoErr) throw photoErr;
 
-      const childCovers: Record<string, string> = {};
+      let childCovers: Record<string, string> = {};
       let childPhotoTotal = 0;
       if (children && children.length > 0) {
         const childIds = children.map((c) => c.id);
-        const [{ data: childPhotos }, { count: childCount }] = await Promise.all([
-          supabase.from("photos").select("event_id, preview_path").in("event_id", childIds).limit(240),
+        const [{ data: grandChildren }, { count: childCount }] = await Promise.all([
+          supabase.from("events").select("id, parent_id").in("parent_id", childIds),
           supabase
             .from("photos")
             .select("id", { count: "exact", head: true })
             .in("event_id", childIds),
         ]);
         childPhotoTotal = childCount ?? 0;
-        for (const row of childPhotos ?? []) {
-          if (!childCovers[row.event_id]) childCovers[row.event_id] = row.preview_path;
+        const grandIds = (grandChildren ?? []).map((g) => g.id);
+        const covers = await fetchFolderCovers([...childIds, ...grandIds]);
+        childCovers = {};
+        for (const child of children) {
+          const own = covers[child.id];
+          if (own) {
+            childCovers[child.id] = own;
+            continue;
+          }
+          const grand = (grandChildren ?? []).find((g) => g.parent_id === child.id && covers[g.id]);
+          if (grand) childCovers[child.id] = covers[grand.id]!;
         }
       }
+
       return {
         event,
         photos: photos ?? [],
