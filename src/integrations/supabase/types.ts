@@ -66,7 +66,11 @@ export type Database = {
           created_at: string
           id: string
           order_id: string
+          photo_code: string | null
           photo_id: string | null
+          photo_original_path: string | null
+          photo_path: string | null
+          photo_title: string | null
           product_type: string
           unit_price_cents: number
         }
@@ -74,7 +78,11 @@ export type Database = {
           created_at?: string
           id?: string
           order_id: string
+          photo_code?: string | null
           photo_id?: string | null
+          photo_original_path?: string | null
+          photo_path?: string | null
+          photo_title?: string | null
           product_type?: string
           unit_price_cents?: number
         }
@@ -82,7 +90,11 @@ export type Database = {
           created_at?: string
           id?: string
           order_id?: string
+          photo_code?: string | null
           photo_id?: string | null
+          photo_original_path?: string | null
+          photo_path?: string | null
+          photo_title?: string | null
           product_type?: string
           unit_price_cents?: number
         }
