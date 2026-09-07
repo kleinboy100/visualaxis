@@ -142,12 +142,22 @@ export const getDownloadLink = createServerFn({ method: "POST" })
     const path = photo?.original_path ?? photo?.preview_path;
     if (!path) throw new Error("File is unavailable.");
 
-    const bucket = photo?.original_path ? "photo-originals" : "photo-previews";
-    const { data: signed, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, 60 * 10, { download: true });
-    if (error || !signed) throw new Error("Could not create the download link.");
-    return { url: signed.signedUrl };
+    const sign = async (bucket: string, key: string) => {
+      const { data: signed, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(key, 60 * 10, { download: true });
+      if (error || !signed) return null;
+      return signed.signedUrl;
+    };
+
+    // Prefer the full-resolution original; if it never finished uploading,
+    // fall back to the stored (un-watermarked) preview so the buyer still
+    // gets their photo instead of an error.
+    let url = photo?.original_path ? await sign("photo-originals", photo.original_path) : null;
+    if (!url && photo?.preview_path) url = await sign("photo-previews", photo.preview_path);
+    if (!url) throw new Error("Could not create the download link.");
+    return { url };
+
   });
 
 export const claimFirstAdmin = createServerFn({ method: "POST" })
