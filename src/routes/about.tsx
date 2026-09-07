@@ -44,14 +44,72 @@ function AboutPage() {
           is linked to your account, and your downloads stay available in your order history.
         </p>
       </div>
+
+      <div className="panel mt-10 p-5">
+        <p className="font-display text-sm font-semibold">Contact Visual Axis Media</p>
+        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          <li>
+            Call / WhatsApp:{" "}
+            <a href={CONTACT.phoneHref} className="text-primary hover:opacity-80">
+              {CONTACT.phone}
+            </a>
+          </li>
+          <li>
+            Email:{" "}
+            <a href={`mailto:${CONTACT.email}`} className="text-primary hover:opacity-80">
+              {CONTACT.email}
+            </a>
+          </li>
+          <li>
+            Facebook:{" "}
+            <a
+              href={CONTACT.facebook}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:opacity-80"
+            >
+              {CONTACT.facebookLabel}
+            </a>
+          </li>
+          <li>
+            Instagram:{" "}
+            <a
+              href={CONTACT.instagram}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:opacity-80"
+            >
+              {CONTACT.instagramLabel}
+            </a>
+          </li>
+          <li>
+            Location:{" "}
+            <a
+              href={CONTACT.mapHref}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:opacity-80"
+            >
+              {CONTACT.address}
+            </a>
+          </li>
+        </ul>
+      </div>
+
       <div className="mt-10 flex flex-wrap gap-3">
         <Button asChild>
           <Link to="/events">Browse galleries</Link>
         </Button>
         <Button asChild variant="outline">
-          <a href="mailto:hello@visualaxis.co.za">Book a shoot</a>
+          <a href={`mailto:${CONTACT.email}`}>Book a shoot</a>
+        </Button>
+        <Button asChild variant="outline">
+          <a href={CONTACT.whatsappHref} target="_blank" rel="noreferrer">
+            WhatsApp us
+          </a>
         </Button>
       </div>
+
     </div>
   );
 }
