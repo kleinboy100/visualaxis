@@ -8,8 +8,8 @@ export const CONTACT = {
   email: "info@visualaxismedia.co.za",
   facebook: "https://www.facebook.com/search/top?q=Visual%20Axis%20Media",
   facebookLabel: "Visual Axis Media",
-  instagram: "https://www.instagram.com/visualmediaaxis",
-  instagramLabel: "@visualmediaaxis",
+  instagram: "https://www.instagram.com/visualaxismedia",
+  instagramLabel: "@visualaxismedia",
   address: "6WQJ+F6, Potchefstroom, South Africa",
   mapHref: "https://www.google.com/maps/search/?api=1&query=6WQJ%2BF6+Potchefstroom+South+Africa",
 };
