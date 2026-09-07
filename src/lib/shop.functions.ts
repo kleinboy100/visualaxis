@@ -24,7 +24,7 @@ export const startCheckout = createServerFn({ method: "POST" })
     const photoIds = [...new Set(data.items.map((i) => i.photoId))];
     const { data: photos, error: photoErr } = await supabase
       .from("photos")
-      .select("id, digital_price_cents, print_price_cents")
+      .select("id, digital_price_cents, print_price_cents, preview_path, original_path, title, code")
       .in("id", photoIds);
     if (photoErr || !photos || photos.length !== photoIds.length) {
       throw new Error("Some photos are no longer available.");
@@ -34,6 +34,7 @@ export const startCheckout = createServerFn({ method: "POST" })
       const photo = photos.find((p) => p.id === item.photoId)!;
       return {
         ...item,
+        photo,
         unit_price_cents:
           item.productType === "print" ? photo.print_price_cents : photo.digital_price_cents,
       };
@@ -59,9 +60,15 @@ export const startCheckout = createServerFn({ method: "POST" })
         photo_id: i.photoId,
         product_type: i.productType,
         unit_price_cents: i.unit_price_cents,
+        // Snapshot so the buyer keeps access even if the photo is later removed.
+        photo_path: i.photo.preview_path,
+        photo_original_path: i.photo.original_path,
+        photo_title: i.photo.title,
+        photo_code: i.photo.code,
       })),
     );
     if (itemsErr) throw new Error("Could not save your order items.");
+
 
     const { createYocoCheckout } = await import("./shop.server");
     const checkout = await createYocoCheckout({
