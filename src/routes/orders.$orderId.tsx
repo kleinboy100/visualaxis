@@ -92,8 +92,8 @@ function OrderPage() {
     void (async () => {
       for (const [index, item] of digital.entries()) {
         try {
-          const res = await download({ data: { orderId, photoId: item.photo_id } });
-          const name = `${item.photos?.code ?? item.photos?.title ?? "visual-axis-photo"}.jpg`;
+          const res = await download({ data: { orderId, itemId: item.id } });
+          const name = `${item.photos?.code ?? item.photo_code ?? item.photos?.title ?? item.photo_title ?? "visual-axis-photo"}.jpg`;
           window.setTimeout(() => triggerDownload(res.url, name), index * 700);
         } catch {
           /* the manual download button remains available */
@@ -103,6 +103,7 @@ function OrderPage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, data?.status, orderId]);
+
 
   if (!user || isLoading) {
     return <p className="mx-auto max-w-4xl px-4 py-16 text-sm text-muted-foreground">Loading…</p>;
