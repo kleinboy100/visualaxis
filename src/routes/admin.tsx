@@ -506,21 +506,42 @@ function PhotosTab() {
     // Background: push the full-resolution originals used for paid downloads.
     void (async () => {
       let oCursor = 0;
+      let oFailed = 0;
+      const warn = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = "";
+      };
+      window.addEventListener("beforeunload", warn);
       const oWorker = async () => {
         while (oCursor < originals.length) {
           const item = originals[oCursor++]!;
-          const { error } = await supabase.storage
-            .from("photo-originals")
-            .upload(item.key, item.file, {
-              cacheControl: "31536000",
-              contentType: item.contentType,
-              upsert: true,
-            });
-          if (error) console.error("Original upload failed", item.key, error);
+          let ok = false;
+          for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+            const { error } = await supabase.storage
+              .from("photo-originals")
+              .upload(item.key, item.file, {
+                cacheControl: "31536000",
+                contentType: item.contentType,
+                upsert: true,
+              });
+            if (!error) ok = true;
+            else {
+              console.error("Original upload failed", item.key, error);
+              await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+            }
+          }
+          if (!ok) oFailed += 1;
         }
       };
       await Promise.all(Array.from({ length: Math.min(4, originals.length) }, oWorker));
+      window.removeEventListener("beforeunload", warn);
+      if (oFailed > 0) {
+        toast.error(`${oFailed} full-size file${oFailed > 1 ? "s" : ""} did not finish uploading`);
+      } else if (originals.length > 0) {
+        toast.success("Full-size files ready for downloads");
+      }
     })();
+
   };
 
 
