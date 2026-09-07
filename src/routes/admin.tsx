@@ -754,14 +754,24 @@ function PhotosTab() {
                     className="text-muted-foreground hover:text-destructive"
                     onClick={async () => {
                       if (!window.confirm("Delete this photo?")) return;
+                      // Delete the record first: photos that customers already
+                      // bought are protected, and their files must stay in place.
+                      const { error } = await supabase.from("photos").delete().eq("id", photo.id);
+                      if (error) {
+                        toast.error(
+                          error.message.includes("order_items")
+                            ? "This photo was already purchased, so it can't be deleted."
+                            : error.message,
+                        );
+                        return;
+                      }
                       await supabase.storage.from("photo-previews").remove([photo.preview_path]);
                       if (photo.original_path) {
                         await supabase.storage.from("photo-originals").remove([photo.original_path]);
                       }
-                      const { error } = await supabase.from("photos").delete().eq("id", photo.id);
-                      if (error) toast.error(error.message);
-                      else void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
+                      void qc.invalidateQueries({ queryKey: ["admin-photos", eventId] });
                     }}
+
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

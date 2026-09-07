@@ -53,7 +53,7 @@ function OrderPage() {
       const { data: order, error } = await supabase
         .from("orders")
         .select(
-          "id, status, total_cents, created_at, shipping_address, order_items(id, product_type, unit_price_cents, photo_id, photos(title, code, preview_path))",
+          "id, status, total_cents, created_at, shipping_address, order_items(id, product_type, unit_price_cents, photo_id, photo_path, photo_title, photo_code, photos(title, code, preview_path))",
         )
         .eq("id", orderId)
         .maybeSingle();
@@ -92,8 +92,8 @@ function OrderPage() {
     void (async () => {
       for (const [index, item] of digital.entries()) {
         try {
-          const res = await download({ data: { orderId, photoId: item.photo_id } });
-          const name = `${item.photos?.code ?? item.photos?.title ?? "visual-axis-photo"}.jpg`;
+          const res = await download({ data: { orderId, itemId: item.id } });
+          const name = `${item.photos?.code ?? item.photo_code ?? item.photos?.title ?? item.photo_title ?? "visual-axis-photo"}.jpg`;
           window.setTimeout(() => triggerDownload(res.url, name), index * 700);
         } catch {
           /* the manual download button remains available */
@@ -103,6 +103,7 @@ function OrderPage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, data?.status, orderId]);
+
 
   if (!user || isLoading) {
     return <p className="mx-auto max-w-4xl px-4 py-16 text-sm text-muted-foreground">Loading…</p>;
@@ -150,13 +151,16 @@ function OrderPage() {
         {(data.order_items ?? []).map((item) => (
           <div key={item.id} className="panel flex items-center gap-4 p-3">
             <img
-              src={previewUrl(item.photos?.preview_path ?? "")}
-              alt={item.photos?.title ?? "Purchased photo"}
-              className="h-16 w-24 rounded-md object-cover"
+              src={previewUrl(item.photos?.preview_path ?? item.photo_path ?? "")}
+              alt={item.photos?.title ?? item.photo_title ?? "Purchased photo"}
+              className="h-16 w-24 rounded-md bg-muted object-cover"
+              onError={(e) => {
+                e.currentTarget.style.visibility = "hidden";
+              }}
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">
-                {item.photos?.title ?? item.photos?.code ?? "Photo"}
+                {item.photos?.title ?? item.photo_title ?? item.photos?.code ?? item.photo_code ?? "Photo"}
               </p>
               <p className="text-xs capitalize text-muted-foreground">
                 {item.product_type} · {formatZar(item.unit_price_cents)}
@@ -169,7 +173,7 @@ function OrderPage() {
                 disabled={!paid}
                 onClick={async () => {
                   try {
-                    const res = await download({ data: { orderId, photoId: item.photo_id } });
+                    const res = await download({ data: { orderId, itemId: item.id } });
                     window.open(res.url, "_blank", "noopener");
                   } catch (err) {
                     toast.error(err instanceof Error ? err.message : "Download failed");
@@ -182,6 +186,7 @@ function OrderPage() {
             )}
           </div>
         ))}
+
       </div>
     </div>
   );
