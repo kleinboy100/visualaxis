@@ -53,7 +53,7 @@ function OrderPage() {
       const { data: order, error } = await supabase
         .from("orders")
         .select(
-          "id, status, total_cents, created_at, shipping_address, order_items(id, product_type, unit_price_cents, photo_id, photos(title, code, preview_path))",
+          "id, status, total_cents, created_at, shipping_address, order_items(id, product_type, unit_price_cents, photo_id, photo_path, photo_title, photo_code, photos(title, code, preview_path))",
         )
         .eq("id", orderId)
         .maybeSingle();
