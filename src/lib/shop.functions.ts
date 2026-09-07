@@ -112,7 +112,14 @@ export const syncOrderStatus = createServerFn({ method: "POST" })
 export const getDownloadLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ orderId: z.string().uuid(), photoId: z.string().uuid() }).parse(input),
+    z
+      .object({
+        orderId: z.string().uuid(),
+        photoId: z.string().uuid().optional(),
+        itemId: z.string().uuid().optional(),
+      })
+      .refine((v) => v.photoId || v.itemId, "A photo or item is required.")
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -133,21 +140,30 @@ export const getDownloadLink = createServerFn({ method: "POST" })
       await supabase.from("orders").update({ status: "paid" }).eq("id", order.id);
     }
 
-    const { data: item } = await supabase
+    let itemQuery = supabase
       .from("order_items")
-      .select("id")
-      .eq("order_id", data.orderId)
-      .eq("photo_id", data.photoId)
-      .maybeSingle();
+      .select("id, photo_id, photo_path, photo_original_path")
+      .eq("order_id", data.orderId);
+    itemQuery = data.itemId
+      ? itemQuery.eq("id", data.itemId)
+      : itemQuery.eq("photo_id", data.photoId!);
+    const { data: item } = await itemQuery.maybeSingle();
     if (!item) throw new Error("This photo is not part of the order.");
 
-    const { data: photo } = await supabase
-      .from("photos")
-      .select("original_path, preview_path")
-      .eq("id", data.photoId)
-      .maybeSingle();
-    const path = photo?.original_path ?? photo?.preview_path;
-    if (!path) throw new Error("File is unavailable.");
+    // Prefer the live photo record, but fall back to the paths captured when
+    // the order was placed so removed photos stay downloadable for the buyer.
+    let originalPath = item.photo_original_path as string | null;
+    let previewPath = item.photo_path as string | null;
+    if (item.photo_id) {
+      const { data: photo } = await supabase
+        .from("photos")
+        .select("original_path, preview_path")
+        .eq("id", item.photo_id)
+        .maybeSingle();
+      originalPath = photo?.original_path ?? originalPath;
+      previewPath = photo?.preview_path ?? previewPath;
+    }
+    if (!originalPath && !previewPath) throw new Error("File is unavailable.");
 
     const sign = async (bucket: string, key: string) => {
       const { data: signed, error } = await supabase.storage
@@ -160,10 +176,11 @@ export const getDownloadLink = createServerFn({ method: "POST" })
     // Prefer the full-resolution original; if it never finished uploading,
     // fall back to the stored (un-watermarked) preview so the buyer still
     // gets their photo instead of an error.
-    let url = photo?.original_path ? await sign("photo-originals", photo.original_path) : null;
-    if (!url && photo?.preview_path) url = await sign("photo-previews", photo.preview_path);
+    let url = originalPath ? await sign("photo-originals", originalPath) : null;
+    if (!url && previewPath) url = await sign("photo-previews", previewPath);
     if (!url) throw new Error("Could not create the download link.");
     return { url };
+
 
   });
 
