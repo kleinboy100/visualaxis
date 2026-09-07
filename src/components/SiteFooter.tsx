@@ -5,7 +5,7 @@ export const CONTACT = {
   phone: "+27 68 795 3577",
   phoneHref: "tel:+27687953577",
   whatsappHref: "https://wa.me/27687953577",
-  email: "info@visualaxis.co.za",
+  email: "info@visualaxismedia.co.za",
   facebook: "https://www.facebook.com/search/top?q=Visual%20Axis%20Media",
   facebookLabel: "Visual Axis Media",
   instagram: "https://www.instagram.com/visualmediaaxis",
