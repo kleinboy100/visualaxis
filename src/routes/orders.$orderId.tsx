@@ -151,13 +151,16 @@ function OrderPage() {
         {(data.order_items ?? []).map((item) => (
           <div key={item.id} className="panel flex items-center gap-4 p-3">
             <img
-              src={previewUrl(item.photos?.preview_path ?? "")}
-              alt={item.photos?.title ?? "Purchased photo"}
-              className="h-16 w-24 rounded-md object-cover"
+              src={previewUrl(item.photos?.preview_path ?? item.photo_path ?? "")}
+              alt={item.photos?.title ?? item.photo_title ?? "Purchased photo"}
+              className="h-16 w-24 rounded-md bg-muted object-cover"
+              onError={(e) => {
+                e.currentTarget.style.visibility = "hidden";
+              }}
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">
-                {item.photos?.title ?? item.photos?.code ?? "Photo"}
+                {item.photos?.title ?? item.photo_title ?? item.photos?.code ?? item.photo_code ?? "Photo"}
               </p>
               <p className="text-xs capitalize text-muted-foreground">
                 {item.product_type} · {formatZar(item.unit_price_cents)}
@@ -170,7 +173,7 @@ function OrderPage() {
                 disabled={!paid}
                 onClick={async () => {
                   try {
-                    const res = await download({ data: { orderId, photoId: item.photo_id } });
+                    const res = await download({ data: { orderId, itemId: item.id } });
                     window.open(res.url, "_blank", "noopener");
                   } catch (err) {
                     toast.error(err instanceof Error ? err.message : "Download failed");
@@ -183,6 +186,7 @@ function OrderPage() {
             )}
           </div>
         ))}
+
       </div>
     </div>
   );
